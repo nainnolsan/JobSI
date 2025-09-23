@@ -3,8 +3,7 @@
 import React from "react";
 // Si usas shadcn/ui, normalmente importas los componentes así:
 // import { Input } from "@/components/ui/input";
-// import { Button } from "@/components/ui/button";
-
+// import { Button } from "@/components/ui/button"
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
