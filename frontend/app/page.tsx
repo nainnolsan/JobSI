@@ -5,11 +5,29 @@ import React from "react";
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Moon, Sun } from "lucide-react";
+// Usar rutas públicas para las banderas
 import { useEffect, useState } from "react";
 // Si usas shadcn/ui, normalmente importas los componentes así:
 // import { Input } from "@/components/ui/input";
 // import { Button } from "@/components/ui/button"
 export default function LoginPage() {
+  // Diccionario de traducciones tipado
+  const t: Record<"es" | "en", { title: string; email: string; password: string; login: string }> = {
+    es: {
+      title: "Iniciar sesión",
+      email: "Correo electrónico",
+      password: "Contraseña",
+      login: "Iniciar sesión"
+    },
+    en: {
+      title: "Sign in",
+      email: "Email",
+      password: "Password",
+      login: "Sign in"
+    }
+  };
+  // Estado para idioma
+  const [lang, setLang] = useState<"es" | "en">("es");
   // Estado para modo oscuro
   const [darkMode, setDarkMode] = useState(false);
 
@@ -24,54 +42,64 @@ export default function LoginPage() {
   }, [darkMode]);
 
   return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-              {/* Contenedor del formulario */}
-              <div className="w-full max-w-sm p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-  <h1 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-gray-100">Iniciar sesión</h1>
-        {/* Formulario de login */}
-        <form className="space-y-4">
-          {/* Campo de email */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Correo electrónico</label>
-            <Input
-              type="email"
-              id="email"
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring focus:border-blue-300 dark:bg-gray-900 dark:text-gray-100"
-              placeholder="tucorreo@ejemplo.com"
-              required
-            />
-          </div>
-          {/* Campo de contraseña */}
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Contraseña</label>
-            <Input
-              type="password"
-              id="password"
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring focus:border-blue-300 dark:bg-gray-900 dark:text-gray-100"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          {/* Botón de login usando shadcn/ui */}
-      <Button type="submit" className="w-full bg-yellow-500 hover:bg-yellow-600 text-white dark:bg-yellow-400 dark:hover:bg-yellow-500 dark:text-gray-900">Iniciar sesión</Button>
-        </form>
+    <>
+      {/* Botón flotante para cambiar idioma usando SVGs locales */}
+      <div className="fixed top-6 right-6 z-50 cursor-pointer">
+        {lang === "es" ? (
+          <img src="/mexico.svg" alt="México" className="w-8 h-5 rounded-md hover:scale-125 transition-transform duration-200" onClick={() => setLang("en")} />
+        ) : (
+          <img src="/usa.svg" alt="USA" className="w-8 h-5 rounded-md hover:scale-125 transition-transform duration-200" onClick={() => setLang("es")} />
+        )}
       </div>
-      {/* Botón flotante para activar/desactivar modo oscuro */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button
-          variant="outline"
-          onClick={() => setDarkMode((prev) => !prev)}
-          className={darkMode
-            ? "bg-gray-900 text-yellow-400 border-yellow-400 flex items-center justify-center"
-            : "bg-white text-gray-400 border-gray-300 flex items-center justify-center group"
-          }
-        >
-          {darkMode
-            ? <Sun className="w-5 h-5 text-yellow-400" />
-            : <Moon className="w-5 h-5 text-gray-400 group-hover:text-yellow-400 transition-colors duration-200" />
-          }
-        </Button>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        {/* Contenedor del formulario */}
+        <div className="w-full max-w-sm p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+          <h1 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-gray-100">{t[lang].title}</h1>
+          {/* Formulario de login */}
+          <form className="space-y-4">
+            {/* Campo de email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t[lang].email}</label>
+              <Input
+                type="email"
+                id="email"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring focus:border-blue-300 dark:bg-gray-900 dark:text-gray-100"
+                placeholder={lang === "es" ? "tucorreo@ejemplo.com" : "youremail@example.com"}
+                required
+              />
+            </div>
+            {/* Campo de contraseña */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t[lang].password}</label>
+              <Input
+                type="password"
+                id="password"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring focus:border-blue-300 dark:bg-gray-900 dark:text-gray-100"
+                placeholder={lang === "es" ? "••••••••" : "••••••••"}
+                required
+              />
+            </div>
+            {/* Botón de login usando shadcn/ui */}
+            <Button type="submit" className="w-full bg-yellow-500 hover:bg-yellow-600 text-white dark:bg-purple-500 dark:hover:bg-purple-600 dark:text-gray-100">{t[lang].login}</Button>
+          </form>
+        </div>
+        {/* Botón flotante para activar/desactivar modo oscuro */}
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            variant="outline"
+            onClick={() => setDarkMode((prev) => !prev)}
+            className={darkMode
+              ? "bg-gray-900 text-purple-400 border-purple-400 flex items-center justify-center group"
+              : "bg-white text-gray-400 border-gray-300 flex items-center justify-center group"
+            }
+          >
+            {darkMode
+              ? <Sun className="w-5 h-5 text-gray-400 group-hover:text-yellow-400 transition-colors duration-200" />
+              : <Moon className="w-5 h-5 text-gray-400 group-hover:text-purple-400 transition-colors duration-200" />
+            }
+          </Button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
