@@ -30,6 +30,11 @@ export default function LoginPage() {
   const [lang, setLang] = useState<"es" | "en">("es");
   // Estado para modo oscuro
   const [darkMode, setDarkMode] = useState(false);
+  // Estado para login
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Aplica la clase dark al html según el estado
   useEffect(() => {
@@ -60,13 +65,38 @@ export default function LoginPage() {
         >
           <h1 className="text-2xl font-bold mb-6 text-center">{t[lang].title}</h1>
           {/* Formulario de login */}
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            setError(null);
+            try {
+              const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/signin`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+              });
+              const data = await res.json();
+              if (!res.ok) {
+                setError(data.error || (lang === "es" ? "Credenciales incorrectas" : "Invalid credentials"));
+              } else {
+                localStorage.setItem("token", data.token);
+                setError(null);
+                // Aquí puedes redirigir o mostrar éxito
+              }
+            } catch (err) {
+              setError(lang === "es" ? "Error de red" : "Network error");
+            } finally {
+              setLoading(false);
+            }
+          }}>
             {/* Campo de email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium">{t[lang].email}</label>
               <Input
-                type="email"
+                type=""
                 id="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 ${darkMode ? 'bg-gray-800 text-gray-100 border border-gray-500/40 placeholder:text-gray-400 selection:bg-blue-400 selection:text-white focus:ring-1 focus:ring-gray-400/40 focus:border-gray-400/40' : 'bg-gray-50 text-gray-900 border-gray-300 placeholder:text-gray-400 selection:bg-blue-200 selection:text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-blue-400'}`}
                 placeholder={lang === "es" ? "tucorreo@ejemplo.com" : "youremail@example.com"}
                 required
@@ -78,17 +108,23 @@ export default function LoginPage() {
               <Input
                 type="password"
                 id="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 ${darkMode ? 'bg-gray-800 text-gray-100 border border-gray-500/40 placeholder:text-gray-400 selection:bg-blue-400 selection:text-white focus:ring-1 focus:ring-gray-400/40 focus:border-gray-400/40' : 'bg-gray-50 text-gray-900 border-gray-300 placeholder:text-gray-400 selection:bg-blue-200 selection:text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-blue-400'}`}
                 placeholder={lang === "es" ? "••••••••" : "••••••••"}
                 required
               />
             </div>
             {/* Botón de login usando shadcn/ui */}
+            {error && (
+              <div className="text-red-500 text-sm text-center">{error}</div>
+            )}
             <Button
               type="submit"
               className={`w-full text-white ${darkMode ? 'bg-purple-500 hover:bg-purple-600 text-gray-100' : 'bg-amber-400 hover:bg-amber-500'}`}
+              disabled={loading}
             >
-              {t[lang].login}
+              {loading ? (lang === "es" ? "Entrando..." : "Signing in...") : t[lang].login}
             </Button>
           </form>
         </div>
