@@ -1,3 +1,6 @@
+# Evita subir dependencias y archivos de lock
+node_modules/
+package-lock.json
 # Ignorar archivos de entorno
 .env
 *.env
