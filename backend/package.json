@@ -2,7 +2,6 @@
   "name": "jobsi-backend",
   "version": "1.0.0",
   "main": "src/index.ts",
-  
   "scripts": {
     "dev": "ts-node --loader ts-node/esm src/index.ts",
     "start": "node dist/index.js",
