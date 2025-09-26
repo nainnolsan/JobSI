@@ -67,7 +67,7 @@ export default function LoginPage() {
               <Input
                 type="email"
                 id="email"
-                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring ${darkMode ? 'bg-gray-700 text-gray-100 border-gray-600 placeholder:text-gray-400 selection:bg-blue-400 selection:text-white' : 'bg-gray-50 text-gray-900 border-gray-300 placeholder:text-gray-400 selection:bg-blue-200 selection:text-gray-900'}`}
+                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 ${darkMode ? 'bg-gray-800 text-gray-100 border border-gray-500/40 placeholder:text-gray-400 selection:bg-blue-400 selection:text-white focus:ring-1 focus:ring-gray-400/40 focus:border-gray-400/40' : 'bg-gray-50 text-gray-900 border-gray-300 placeholder:text-gray-400 selection:bg-blue-200 selection:text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-blue-400'}`}
                 placeholder={lang === "es" ? "tucorreo@ejemplo.com" : "youremail@example.com"}
                 required
               />
@@ -78,7 +78,7 @@ export default function LoginPage() {
               <Input
                 type="password"
                 id="password"
-                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring ${darkMode ? 'bg-gray-700 text-gray-100 border-gray-600 placeholder:text-gray-400 selection:bg-blue-400 selection:text-white' : 'bg-gray-50 text-gray-900 border-gray-300 placeholder:text-gray-400 selection:bg-blue-200 selection:text-gray-900'}`}
+                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 ${darkMode ? 'bg-gray-800 text-gray-100 border border-gray-500/40 placeholder:text-gray-400 selection:bg-blue-400 selection:text-white focus:ring-1 focus:ring-gray-400/40 focus:border-gray-400/40' : 'bg-gray-50 text-gray-900 border-gray-300 placeholder:text-gray-400 selection:bg-blue-200 selection:text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-blue-400'}`}
                 placeholder={lang === "es" ? "••••••••" : "••••••••"}
                 required
               />
