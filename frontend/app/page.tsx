@@ -2,26 +2,26 @@
 // Vista de Login minimalista usando TailwindCSS y shadcn/ui
 "use client";
 import React from "react";
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
-// Usar rutas públicas para las banderas
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 // Si usas shadcn/ui, normalmente importas los componentes así:
 // import { Input } from "@/components/ui/input";
 // import { Button } from "@/components/ui/button"
 export default function LoginPage() {
   // Diccionario de traducciones tipado
-  const t: Record<"es" | "en", { title: string; email: string; password: string; login: string }> = {
+  const t: Record<"es" | "en", { title: string; username: string; password: string; login: string }> = {
     es: {
       title: "Iniciar sesión",
-      email: "Correo electrónico",
+      username: "Nombre de usuario",
       password: "Contraseña",
       login: "Iniciar sesión"
     },
     en: {
       title: "Sign in",
-      email: "Email",
+      username: "Username",
       password: "Password",
       login: "Sign in"
     }
@@ -31,7 +31,8 @@ export default function LoginPage() {
   // Estado para modo oscuro
   const [darkMode, setDarkMode] = useState(false);
   // Estado para login
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +74,7 @@ export default function LoginPage() {
               const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/signin`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ username, password })
               });
               const data = await res.json();
               if (!res.ok) {
@@ -81,7 +82,7 @@ export default function LoginPage() {
               } else {
                 localStorage.setItem("token", data.token);
                 setError(null);
-                // Aquí puedes redirigir o mostrar éxito
+                router.push("/dashboard");
               }
             } catch (err) {
               setError(lang === "es" ? "Error de red" : "Network error");
@@ -89,16 +90,16 @@ export default function LoginPage() {
               setLoading(false);
             }
           }}>
-            {/* Campo de email */}
+            {/* Campo de username */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium">{t[lang].email}</label>
+              <label htmlFor="username" className="block text-sm font-medium">{t[lang].username}</label>
               <Input
-                type=""
-                id="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                type="text"
+                id="username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 ${darkMode ? 'bg-gray-800 text-gray-100 border border-gray-500/40 placeholder:text-gray-400 selection:bg-blue-400 selection:text-white focus:ring-1 focus:ring-gray-400/40 focus:border-gray-400/40' : 'bg-gray-50 text-gray-900 border-gray-300 placeholder:text-gray-400 selection:bg-blue-200 selection:text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-blue-400'}`}
-                placeholder={lang === "es" ? "tucorreo@ejemplo.com" : "youremail@example.com"}
+                placeholder={lang === "es" ? "tusuario" : "username"}
                 required
               />
             </div>
@@ -127,6 +128,9 @@ export default function LoginPage() {
               {loading ? (lang === "es" ? "Entrando..." : "Signing in...") : t[lang].login}
             </Button>
           </form>
+          <div className="mt-4 text-center">
+            ¿No tienes cuenta? <a href="/register" className="text-blue-600 hover:underline">Regístrate</a>
+          </div>
         </div>
         {/* Botón flotante para activar/desactivar modo oscuro */}
         <div className="fixed bottom-6 right-6 z-50">
