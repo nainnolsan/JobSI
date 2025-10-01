@@ -2,6 +2,7 @@
 // Vista de Login minimalista usando TailwindCSS y shadcn/ui
 "use client";
 import React from "react";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
@@ -52,9 +53,9 @@ export default function LoginPage() {
       {/* Botón flotante para cambiar idioma usando SVGs locales */}
       <div className="fixed top-6 right-6 z-50 cursor-pointer">
         {lang === "es" ? (
-          <img src="/mexico.svg" alt="México" className="w-8 h-5 rounded-md hover:scale-125 transition-transform duration-200" onClick={() => setLang("en")} />
+         <Image src="/mexico.svg" alt="México" width={32} height={20} className="rounded-md hover:scale-125 transition-transform duration-200" onClick={() => setLang("en")} />
         ) : (
-          <img src="/usa.svg" alt="USA" className="w-8 h-5 rounded-md hover:scale-125 transition-transform duration-200" onClick={() => setLang("es")} />
+         <Image src="/usa.svg" alt="USA" width={32} height={20} className="rounded-md hover:scale-125 transition-transform duration-200" onClick={() => setLang("es")} />
         )}
       </div>
       <div

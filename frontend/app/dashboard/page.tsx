@@ -2,14 +2,15 @@
 console.log("DashboardPage montado");
 import React, { useState, useEffect } from "react";
 import { countryPhoneDataFull } from '@/lib/countryPhoneDataFull';
+import { JWTPayload } from "@/lib/decodeJWT";
 import { useRouter } from "next/navigation";
 import { decodeJWT } from "@/lib/decodeJWT";
-import { Button } from "@/components/ui/button";
+// ...existing code...
 
 export default function DashboardPage() {
   const [username, setUsername] = useState<string | null>(null);
   const [nombres, setNombres] = useState<string | null>(null);
-  const [jwtPayload, setJWTPayload] = useState<any | null>(null);
+  const [jwtPayload, setJWTPayload] = useState<JWTPayload | null>(null);
   const [selectedCountry, setSelectedCountry] = useState(countryPhoneDataFull[0]);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [phone, setPhone] = useState("");
@@ -131,7 +132,7 @@ export default function DashboardPage() {
                   <input
                     type="text"
                     className="w-full px-4 py-2 rounded border bg-gray-100 text-gray-500 cursor-not-allowed pr-10"
-                    value={jwtPayload?.apellidos ?? " "}
+                    value={typeof jwtPayload?.apellidos === "string" ? jwtPayload.apellidos : " "}
                     disabled
                     readOnly
                   />
@@ -203,7 +204,7 @@ export default function DashboardPage() {
                   <input
                     type="email"
                     className="w-full px-4 py-2 rounded border bg-gray-100 text-gray-500 cursor-not-allowed pr-10"
-                    value={jwtPayload?.email ?? " "}
+                    value={typeof jwtPayload?.email === "string" ? jwtPayload.email : " "}
                     disabled
                     readOnly
                   />

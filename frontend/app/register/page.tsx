@@ -44,7 +44,7 @@ export default function RegisterPage() {
           router.push("/");
         }, 1200);
       }
-    } catch (err) {
+  } catch {
       setError("Error de red");
     } finally {
       setLoading(false);

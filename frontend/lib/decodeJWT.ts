@@ -13,6 +13,6 @@ export function decodeJWT(token: string): JWTPayload | null {
     const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
     return decoded;
   } catch (e) {
-    return null;
+     return null;
   }
 }
