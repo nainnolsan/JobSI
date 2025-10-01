@@ -65,7 +65,13 @@ router.post('/signin', async (req, res) => {
         }
         console.log("User nombres:", user.nombres);
         console.log("Signing JWT...");
-        const token = jwt.sign({ userId: user.id, username: user.username, nombres: user.nombres }, process.env.JWT_SECRET);
+        const token = jwt.sign({
+            userId: user.id,
+            username: user.username,
+            nombres: user.nombres,
+            apellidos: user.apellidos,
+            email: user.email
+        }, process.env.JWT_SECRET);
         console.log("Login success for", username);
         res.json({ token });
     }
