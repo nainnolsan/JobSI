@@ -9,6 +9,15 @@ export interface Experience {
   ubicacion?: string;
 }
 
+interface BackendExperience {
+  empresa: string;
+  puesto: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  descripcion: string;
+  ubicacion?: string;
+}
+
 const ExperienceSection: React.FC = () => {
   const [experiencias, setExperiencias] = useState<Experience[]>([]);
   const [form, setForm] = useState<Experience>({
@@ -35,7 +44,7 @@ const ExperienceSection: React.FC = () => {
       .then(data => {
         if (Array.isArray(data)) {
           // Mapear campos del backend a los del frontend
-          const mapped = data.map((exp: any) => ({
+          const mapped = data.map((exp: BackendExperience) => ({
             empresa: exp.empresa,
             puesto: exp.puesto,
             fechaInicio: exp.fecha_inicio,
