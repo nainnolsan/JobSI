@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { BsLinkedin, BsTwitter, BsFacebook } from "react-icons/bs";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,8 @@ export default function RegisterPage() {
     fecha_nacimiento: "",
     telefono: "",
     email: "",
-    password: ""
+    password: "",
+    linkedin: ""
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

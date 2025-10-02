@@ -1,8 +1,8 @@
-
 import type { Request, Response, NextFunction } from 'express';
 const express = require('express');
 const cors = require('cors');
-const authRouter = require('./routes/auth');
+const authRouter = require('./routes/auth').default;
+const profileRouter = require('./routes/profile').default;
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -18,6 +18,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use('/api', authRouter);
+app.use('/api', profileRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

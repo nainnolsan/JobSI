@@ -1,4 +1,9 @@
 "use client";
+// ...existing imports...
+import ExperienceSection from "../../components/ExperienceSection";
+import InternshipSection from "../../components/InternshipSection";
+import PortfolioSection from "../../components/PortfolioSection";
+import { BsLinkedin } from "react-icons/bs";
 console.log("DashboardPage montado");
 import React, { useState, useEffect } from "react";
 import { countryPhoneDataFull } from '@/lib/countryPhoneDataFull';
@@ -8,12 +13,89 @@ import { decodeJWT } from "@/lib/decodeJWT";
 // ...existing code...
 
 export default function DashboardPage() {
+  // Estado para datos personales editables
+  const [telefono, setTelefono] = useState(""); // solo el número, sin código país
+  const [direccion, setDireccion] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Cargar datos personales al montar
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        // Si el teléfono tiene código de país, selecciona el país y separa el número
+        if (data.telefono) {
+          const match = countryPhoneDataFull.find(c => data.telefono.startsWith(c.dialCode));
+          if (match) {
+            setSelectedCountry(match);
+            setTelefono(data.telefono.replace(match.dialCode, ""));
+          } else {
+            // Si no se detecta país, poner México por defecto
+            const mexico = countryPhoneDataFull.find(c => c.code === "MX") || countryPhoneDataFull[0];
+            setSelectedCountry(mexico);
+            setTelefono(data.telefono);
+          }
+        } else {
+          // Si no hay teléfono, país por defecto México y campo vacío
+          const mexico = countryPhoneDataFull.find(c => c.code === "MX") || countryPhoneDataFull[0];
+          setSelectedCountry(mexico);
+          setTelefono("");
+        }
+        setDireccion(data.direccion || "");
+        setLinkedin(data.linkedin || "");
+      });
+  }, []);
+
+  // Guardar datos personales
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("No autenticado");
+      setLoading(false);
+      return;
+    }
+    // Concatena el código de país con el número
+    const telefonoCompleto = telefono ? `${selectedCountry.dialCode}${telefono}` : "";
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ telefono: telefonoCompleto, direccion, linkedin })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al guardar");
+  setSuccess(true);
+  setTimeout(() => setSuccess(false), 2500); // Oculta el mensaje de éxito después de 2.5s
+  setTimeout(() => setActiveTab("Experiencia"), 800); // Cambia a la pestaña de experiencia tras breve confirmación
+    } catch (err: unknown) {
+      if (err instanceof Error) setError(err.message);
+      else setError("Error desconocido");
+      setTimeout(() => setError(null), 3500); // Oculta el mensaje de error después de 3.5s
+    } finally {
+      setLoading(false);
+    }
+  };
+  // ...existing state and logic...
   const [username, setUsername] = useState<string | null>(null);
   const [nombres, setNombres] = useState<string | null>(null);
   const [jwtPayload, setJWTPayload] = useState<JWTPayload | null>(null);
   const [selectedCountry, setSelectedCountry] = useState(countryPhoneDataFull[0]);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-  const [phone, setPhone] = useState("");
+  // Eliminado phone y setPhone porque no se usan
   const [showMenu, setShowMenu] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("Datos personales");
   const router = useRouter();
@@ -112,7 +194,7 @@ export default function DashboardPage() {
           <h2 className="text-3xl font-bold text-blue-700 mb-8 ">{activeTab}</h2>
           {/* Formulario solo si estamos en 'Datos personales' */}
           {activeTab === "Datos personales" && (
-            <form className="w-full max-w-lg bg-white/80 rounded-2xl shadow-lg p-8 flex flex-col gap-6 border border-gray-200 backdrop-blur">
+            <form className="w-full max-w-lg bg-white/80 rounded-2xl shadow-lg p-8 flex flex-col gap-6 border border-gray-200 backdrop-blur" onSubmit={handleSave}>
               <div className="relative flex flex-col gap-2">
                 <label className="block text-gray-700 font-semibold mb-2">Nombre completo</label>
                 <div className="relative">
@@ -175,28 +257,22 @@ export default function DashboardPage() {
                   <input
                     type="tel"
                     className="w-full px-4 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700"
-                    placeholder="Ejemplo: (250) 145 1235"
+                    placeholder="Ejemplo: 145 1235"
                     maxLength={14}
-                    value={phone}
-                    onChange={e => {
-                      let value = e.target.value.replace(/\D/g, "");
-                      if (value.length > 10) value = value.slice(0, 10);
-                      let formatted = value;
-                      if (value.length > 6) {
-                        formatted = `(${value.slice(0,3)}) ${value.slice(3,6)} ${value.slice(6)}`;
-                      } else if (value.length > 3) {
-                        formatted = `(${value.slice(0,3)}) ${value.slice(3)}`;
-                      } else if (value.length > 0) {
-                        formatted = `(${value}`;
-                      }
-                      setPhone(formatted);
-                    }}
+                    value={telefono}
+                    onChange={e => setTelefono(e.target.value.replace(/[^0-9 ]/g, ""))}
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-gray-700 font-semibold mb-2">Dirección</label>
-                <input type="text" className="w-full px-4 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Dirección" />
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="Dirección"
+                  value={direccion}
+                  onChange={e => setDireccion(e.target.value)}
+                />
               </div>
               <div className="relative">
                 <label className="block text-gray-700 font-semibold mb-2">Email</label>
@@ -215,10 +291,30 @@ export default function DashboardPage() {
               </div>
               <div>
                 <label className="block text-gray-700 font-semibold mb-2">LinkedIn</label>
-                <input type="url" className="w-full px-4 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="URL de LinkedIn" />
+                <div className="flex items-center gap-2">
+                  <BsLinkedin style={{ fontSize: "2rem", color: "#5a6165ff" }} />
+                  <input
+                    type="url"
+                    className="w-full px-4 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="https://linkedin.com/in/tuusuario"
+                    // Validación eliminada para permitir cualquier URL
+                    value={linkedin}
+                    onChange={e => setLinkedin(e.target.value)}
+                  />
+                </div>
               </div>
-              <button type="submit" className="mt-4 px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-all">Guardar</button>
+              <button type="submit" className="mt-4 px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-all" disabled={loading}>{loading ? "Guardando..." : "Guardar"}</button>
+              {success && <div className="text-green-600 text-sm text-center mt-2">¡Datos personales guardados! Ahora puedes agregar tu experiencia.</div>}
+              {error && <div className="text-red-500 text-sm text-center mt-2">{error}</div>}
             </form>
+          )}
+          {/* Mostrar componentes de experiencia, pasantía y portafolio si la pestaña es 'Experiencia' */}
+          {activeTab === "Experiencia" && (
+            <>
+              <ExperienceSection />
+              <InternshipSection />
+              <PortfolioSection />
+            </>
           )}
         </main>
         {/* Área derecha libre - container flotante */}
