@@ -9,6 +9,15 @@ export interface Internship {
   ubicacion?: string;
 }
 
+interface BackendInternship {
+  empresa: string;
+  puesto: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  descripcion: string;
+  ubicacion?: string;
+}
+
 const InternshipSection: React.FC = () => {
   const [pasantias, setPasantias] = useState<Internship[]>([]);
   const [form, setForm] = useState<Internship>({
@@ -33,7 +42,18 @@ const InternshipSection: React.FC = () => {
     })
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) setPasantias(data);
+        if (Array.isArray(data)) {
+          // Mapear campos del backend a los del frontend
+          const mapped = data.map((pas: BackendInternship) => ({
+            empresa: pas.empresa,
+            puesto: pas.puesto,
+            fechaInicio: pas.fecha_inicio,
+            fechaFin: pas.fecha_fin,
+            descripcion: pas.descripcion,
+            ubicacion: pas.ubicacion
+          }));
+          setPasantias(mapped);
+        }
       });
   }, []);
 
