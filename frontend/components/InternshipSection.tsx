@@ -106,13 +106,24 @@ const InternshipSection: React.FC = () => {
         </form>
       )}
       <ul className="flex flex-col gap-4">
-        {pasantias.map((pas, idx) => (
-          <li key={idx} className="bg-gray-50 rounded shadow p-4">
-            <div className="font-bold text-lg">{pas.puesto} en {pas.empresa}</div>
-            <div className="text-sm text-gray-600">{pas.fechaInicio} - {pas.fechaFin} {pas.ubicacion && `| ${pas.ubicacion}`}</div>
-            <div className="mt-2">{pas.descripcion}</div>
-          </li>
-        ))}
+        {pasantias.map((pas, idx) => {
+          function formatFecha(fecha: string) {
+            if (!fecha) return "";
+            const [year, month] = fecha.split("-");
+            const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            const mes = meses[parseInt(month, 10) - 1] || "";
+            return mes + " " + year;
+          }
+          const inicio = formatFecha(pas.fechaInicio);
+          const fin = formatFecha(pas.fechaFin);
+          return (
+            <li key={idx} className="bg-gray-50 rounded shadow p-4">
+              <div className="font-bold text-lg">{pas.puesto} en {pas.empresa}</div>
+              <div className="text-sm text-gray-600">{inicio} - {fin} {pas.ubicacion && `| ${pas.ubicacion}`}</div>
+              <div className="mt-2">{pas.descripcion}</div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

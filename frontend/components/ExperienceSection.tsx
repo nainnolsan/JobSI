@@ -33,7 +33,18 @@ const ExperienceSection: React.FC = () => {
     })
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) setExperiencias(data);
+        if (Array.isArray(data)) {
+          // Mapear campos del backend a los del frontend
+          const mapped = data.map((exp: any) => ({
+            empresa: exp.empresa,
+            puesto: exp.puesto,
+            fechaInicio: exp.fecha_inicio,
+            fechaFin: exp.fecha_fin,
+            descripcion: exp.descripcion,
+            ubicacion: exp.ubicacion
+          }));
+          setExperiencias(mapped);
+        }
       });
   }, []);
 
@@ -106,13 +117,25 @@ const ExperienceSection: React.FC = () => {
         </form>
       )}
       <ul className="flex flex-col gap-4">
-        {experiencias.map((exp, idx) => (
-          <li key={idx} className="bg-gray-50 rounded shadow p-4">
-            <div className="font-bold text-lg">{exp.puesto} en {exp.empresa}</div>
-            <div className="text-sm text-gray-600">{exp.fechaInicio} - {exp.fechaFin} {exp.ubicacion && `| ${exp.ubicacion}`}</div>
-            <div className="mt-2">{exp.descripcion}</div>
-          </li>
-        ))}
+        {experiencias.map((exp, idx) => {
+          // Formatea fechas a 'Mes Año'
+          function formatFecha(fecha: string) {
+            if (!fecha) return "";
+            const [year, month] = fecha.split("-");
+            const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            const mes = meses[parseInt(month, 10) - 1] || "";
+            return mes + " " + year;
+          }
+          const inicio = formatFecha(exp.fechaInicio);
+          const fin = formatFecha(exp.fechaFin);
+          return (
+            <li key={idx} className="bg-gray-50 rounded shadow p-4">
+              <div className="font-bold text-lg">{exp.puesto} en {exp.empresa}</div>
+              <div className="text-sm text-gray-600">{inicio} - {fin} {exp.ubicacion && `| ${exp.ubicacion}`}</div>
+              <div className="mt-2">{exp.descripcion}</div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
