@@ -85,7 +85,7 @@ export default function LoginPage() {
                 setError(null);
                 router.push("/dashboard");
               }
-            } catch (err) {
+            } catch {
               setError(lang === "es" ? "Error de red" : "Network error");
             } finally {
               setLoading(false);

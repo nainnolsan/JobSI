@@ -25,10 +25,25 @@ function authenticateJWT(req, res, next) {
 router.get('/user', authenticateJWT, async (req, res) => {
     const userId = req.user?.userId;
     try {
-        const result = await db_1.pool.query('SELECT username, nombres, apellidos, fecha_nacimiento, telefono, direccion, linkedin, email FROM users WHERE id = $1', [userId]);
-        if (result.rows.length === 0)
+        // Obtener datos básicos del usuario
+        const userResult = await db_1.pool.query('SELECT username, nombres, apellidos, fecha_nacimiento, telefono, direccion, email FROM users WHERE id = $1', [userId]);
+        if (userResult.rows.length === 0)
             return res.status(404).json({ error: 'Usuario no encontrado' });
-        res.json(result.rows[0]);
+        // Obtener todas las redes sociales de user_links
+        const socialLinksResult = await db_1.pool.query('SELECT type, title, url FROM user_links WHERE user_id = $1', [userId]);
+        // Combinar los datos
+        const userData = userResult.rows[0];
+        // Procesar redes sociales
+        const socialLinks = {};
+        socialLinksResult.rows.forEach(row => {
+            const platformName = row.type === 'linkedin' ? 'LinkedIn' :
+                row.type.charAt(0).toUpperCase() + row.type.slice(1);
+            socialLinks[platformName] = row.url;
+        });
+        // Agregar LinkedIn para compatibilidad con el código existente
+        userData.linkedin = socialLinks.LinkedIn || null;
+        userData.socialLinks = socialLinks;
+        res.json(userData);
     }
     catch (err) {
         res.status(500).json({ error: 'Error al obtener datos', details: err.message });
@@ -39,7 +54,25 @@ router.put('/profile', authenticateJWT, async (req, res) => {
     const { telefono, direccion, linkedin } = req.body;
     const userId = req.user?.userId;
     try {
-        await db_1.pool.query(`UPDATE users SET telefono = $1, direccion = $2, linkedin = $3 WHERE id = $4`, [telefono || null, direccion || null, linkedin || null, userId]);
+        // Actualizar datos básicos en users
+        await db_1.pool.query(`UPDATE users SET telefono = $1, direccion = $2 WHERE id = $3`, [telefono || null, direccion || null, userId]);
+        // Manejar LinkedIn en user_links
+        if (linkedin) {
+            // Verificar si ya existe un registro de LinkedIn
+            const existingLinkedin = await db_1.pool.query('SELECT id FROM user_links WHERE user_id = $1 AND type = $2', [userId, 'linkedin']);
+            if (existingLinkedin.rows.length > 0) {
+                // Actualizar LinkedIn existente
+                await db_1.pool.query('UPDATE user_links SET url = $1 WHERE user_id = $2 AND type = $3', [linkedin, userId, 'linkedin']);
+            }
+            else {
+                // Crear nuevo registro de LinkedIn
+                await db_1.pool.query('INSERT INTO user_links (user_id, type, title, url) VALUES ($1, $2, $3, $4)', [userId, 'linkedin', 'LinkedIn', linkedin]);
+            }
+        }
+        else {
+            // Si linkedin está vacío, eliminar el registro existente
+            await db_1.pool.query('DELETE FROM user_links WHERE user_id = $1 AND type = $2', [userId, 'linkedin']);
+        }
         res.json({ message: 'Datos actualizados correctamente' });
     }
     catch (err) {
@@ -47,6 +80,131 @@ router.put('/profile', authenticateJWT, async (req, res) => {
         if (err instanceof Error)
             message = err.message;
         res.status(500).json({ error: 'Error al actualizar datos', details: message });
+    }
+});
+// Manejar redes sociales del usuario
+router.put('/social-links', authenticateJWT, async (req, res) => {
+    const { socialLinks } = req.body; // { platform: url, platform2: url2, ... }
+    const userId = req.user?.userId;
+    try {
+        // Obtener todas las redes sociales existentes (excepto LinkedIn)
+        const existingLinks = await db_1.pool.query('SELECT id, type, url FROM user_links WHERE user_id = $1 AND type != $2', [userId, 'linkedin']);
+        // Crear un mapa de los links existentes
+        const existingMap = new Map();
+        existingLinks.rows.forEach(row => {
+            const platformName = row.type.charAt(0).toUpperCase() + row.type.slice(1);
+            existingMap.set(platformName, { id: row.id, url: row.url });
+        });
+        // Procesar cada red social del frontend
+        for (const [platform, url] of Object.entries(socialLinks)) {
+            if (platform !== 'LinkedIn' && url && typeof url === 'string' && url.trim() !== '') {
+                const cleanUrl = url.trim();
+                const existing = existingMap.get(platform);
+                if (existing) {
+                    // Si existe pero la URL cambió, actualizar
+                    if (existing.url !== cleanUrl) {
+                        await db_1.pool.query('UPDATE user_links SET url = $1 WHERE id = $2', [cleanUrl, existing.id]);
+                    }
+                    // Marcar como procesado
+                    existingMap.delete(platform);
+                }
+                else {
+                    // No existe, crear nuevo
+                    await db_1.pool.query('INSERT INTO user_links (user_id, type, title, url) VALUES ($1, $2, $3, $4)', [userId, platform.toLowerCase(), platform, cleanUrl]);
+                }
+            }
+        }
+        // Eliminar las redes sociales que ya no están en el frontend
+        for (const [platform, data] of existingMap.entries()) {
+            await db_1.pool.query('DELETE FROM user_links WHERE id = $1', [data.id]);
+        }
+        res.json({ message: 'Redes sociales actualizadas correctamente' });
+    }
+    catch (err) {
+        let message = 'Unknown error';
+        if (err instanceof Error)
+            message = err.message;
+        res.status(500).json({ error: 'Error al actualizar redes sociales', details: message });
+    }
+});
+// Obtener redes sociales del usuario
+router.get('/social-links', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    try {
+        const result = await db_1.pool.query('SELECT type, title, url FROM user_links WHERE user_id = $1', [userId]);
+        // Convertir a objeto { platform: url }
+        const socialLinks = {};
+        result.rows.forEach(row => {
+            // Capitalizar el nombre de la plataforma para consistencia con el frontend
+            const platformName = row.type === 'linkedin' ? 'LinkedIn' :
+                row.type.charAt(0).toUpperCase() + row.type.slice(1);
+            socialLinks[platformName] = row.url;
+        });
+        res.json(socialLinks);
+    }
+    catch (err) {
+        let message = 'Unknown error';
+        if (err instanceof Error)
+            message = err.message;
+        res.status(500).json({ error: 'Error al obtener redes sociales', details: message });
+    }
+});
+// Endpoint unificado para guardar toda la información de contacto
+router.put('/contact-info', authenticateJWT, async (req, res) => {
+    const { telefono, direccion, socialLinks } = req.body;
+    const userId = req.user?.userId;
+    try {
+        // 1. Actualizar datos básicos en users
+        await db_1.pool.query(`UPDATE users SET telefono = $1, direccion = $2 WHERE id = $3`, [telefono || null, direccion || null, userId]);
+        // 2. Manejar LinkedIn específicamente (para compatibilidad)
+        const linkedin = socialLinks?.LinkedIn;
+        if (linkedin) {
+            const existingLinkedin = await db_1.pool.query('SELECT id FROM user_links WHERE user_id = $1 AND type = $2', [userId, 'linkedin']);
+            if (existingLinkedin.rows.length > 0) {
+                await db_1.pool.query('UPDATE user_links SET url = $1 WHERE user_id = $2 AND type = $3', [linkedin, userId, 'linkedin']);
+            }
+            else {
+                await db_1.pool.query('INSERT INTO user_links (user_id, type, title, url) VALUES ($1, $2, $3, $4)', [userId, 'linkedin', 'LinkedIn', linkedin]);
+            }
+        }
+        else {
+            await db_1.pool.query('DELETE FROM user_links WHERE user_id = $1 AND type = $2', [userId, 'linkedin']);
+        }
+        // 3. Manejar otras redes sociales
+        if (socialLinks) {
+            const existingLinks = await db_1.pool.query('SELECT id, type, url FROM user_links WHERE user_id = $1 AND type != $2', [userId, 'linkedin']);
+            const existingMap = new Map();
+            existingLinks.rows.forEach(row => {
+                const platformName = row.type.charAt(0).toUpperCase() + row.type.slice(1);
+                existingMap.set(platformName, { id: row.id, url: row.url });
+            });
+            for (const [platform, url] of Object.entries(socialLinks)) {
+                if (platform !== 'LinkedIn' && url && typeof url === 'string' && url.trim() !== '') {
+                    const cleanUrl = url.trim();
+                    const existing = existingMap.get(platform);
+                    if (existing) {
+                        if (existing.url !== cleanUrl) {
+                            await db_1.pool.query('UPDATE user_links SET url = $1 WHERE id = $2', [cleanUrl, existing.id]);
+                        }
+                        existingMap.delete(platform);
+                    }
+                    else {
+                        await db_1.pool.query('INSERT INTO user_links (user_id, type, title, url) VALUES ($1, $2, $3, $4)', [userId, platform.toLowerCase(), platform, cleanUrl]);
+                    }
+                }
+            }
+            // Eliminar redes sociales que ya no están
+            for (const [platform, data] of existingMap.entries()) {
+                await db_1.pool.query('DELETE FROM user_links WHERE id = $1', [data.id]);
+            }
+        }
+        res.json({ message: 'Información de contacto actualizada correctamente' });
+    }
+    catch (err) {
+        let message = 'Unknown error';
+        if (err instanceof Error)
+            message = err.message;
+        res.status(500).json({ error: 'Error al actualizar información de contacto', details: message });
     }
 });
 // Registro de usuario

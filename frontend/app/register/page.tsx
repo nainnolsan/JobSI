@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { BsLinkedin, BsTwitter, BsFacebook } from "react-icons/bs";
+// import { BsLinkedin, BsTwitter, BsFacebook } from "react-icons/bs"; // No utilizados por ahora
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { countryPhoneDataFull } from '@/lib/countryPhoneDataFull';
 import { JWTPayload } from "@/lib/decodeJWT";
-import { BsLinkedin } from "react-icons/bs";
+import { BsLinkedin, BsInstagram, BsFacebook, BsTwitterX, BsGithub, BsYoutube, BsTiktok, BsGlobe, BsPlusCircle, BsXCircle, BsPencil, BsTrash } from "react-icons/bs";
 import ExperienceSection from "../../components/ExperienceSection";
 import InternshipSection from "../../components/InternshipSection";
 import PortfolioSection from "../../components/PortfolioSection";
@@ -13,26 +13,69 @@ interface ProfileViewProps {
 }
 
 export default function ProfileView({ jwtPayload }: ProfileViewProps) {
-  // Estado para datos personales editables
+  // Estado para información de contacto
   const [telefono, setTelefono] = useState("");
   const [direccion, setDireccion] = useState("");
-  const [linkedin, setLinkedin] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState(countryPhoneDataFull[0]);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("Datos personales");
+  
+  // Estado para redes sociales
+  const [socialLinks, setSocialLinks] = useState<{[key: string]: string}>({});
+  const [showAddSocial, setShowAddSocial] = useState(false);
+  const [newSocialPlatform, setNewSocialPlatform] = useState("LinkedIn");
+  const [newSocialUrl, setNewSocialUrl] = useState("");
+  const [showPlatformDropdown, setShowPlatformDropdown] = useState(false);
+  
+  // Estado para edición de redes sociales
+  const [editingPlatform, setEditingPlatform] = useState<string | null>(null);
+  const [editingUrl, setEditingUrl] = useState("");
+  
+  // Estado de carga para debug
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Cargar datos personales al montar
+  // Mapeo de plataformas con íconos y colores
+  const socialPlatforms = {
+    LinkedIn: { icon: BsLinkedin, color: "#0077B5", dbValue: "LinkedIn" },
+    Instagram: { icon: BsInstagram, color: "#E4405F", dbValue: "Instagram" },
+    Facebook: { icon: BsFacebook, color: "#1877F2", dbValue: "Facebook" },
+    "X (Twitter)": { icon: BsTwitterX, color: "#000000", dbValue: "X (Twitter)" },
+    GitHub: { icon: BsGithub, color: "#333333", dbValue: "GitHub" },
+    TikTok: { icon: BsTiktok, color: "#000000", dbValue: "TikTok" },
+    YouTube: { icon: BsYoutube, color: "#FF0000", dbValue: "YouTube" },
+    Otra: { icon: BsGlobe, color: "#6B7280", dbValue: "Otra" }
+  };
+  
+  const [activeTab, setActiveTab] = useState<string>("Información de contacto");
+
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showPlatformDropdown) {
+        const target = event.target as Element;
+        if (!target.closest('.platform-dropdown')) {
+          setShowPlatformDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showPlatformDropdown]);
+
+  // Cargar datos de contacto al montar
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
+    
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
       .then(data => {
+        // Procesar teléfono
         if (data.telefono) {
           const match = countryPhoneDataFull.find(c => data.telefono.startsWith(c.dialCode));
           if (match) {
@@ -48,12 +91,27 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
           setSelectedCountry(mexico);
           setTelefono("");
         }
+        
+        // Procesar dirección
         setDireccion(data.direccion || "");
-        setLinkedin(data.linkedin || "");
+        
+        // Cargar todas las redes sociales desde la nueva estructura
+        if (data.socialLinks) {
+          setSocialLinks(data.socialLinks);
+        } else if (data.linkedin) {
+          // Fallback para compatibilidad
+          setSocialLinks({ LinkedIn: data.linkedin });
+        }
+        
+        setDataLoaded(true);
+      })
+      .catch(error => {
+        console.error("Error al cargar datos del usuario:", error);
+        setDataLoaded(true);
       });
   }, []);
 
-  // Guardar datos personales
+  // Guardar información de contacto
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -67,19 +125,25 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
     }
     const telefonoCompleto = telefono ? `${selectedCountry.dialCode}${telefono}` : "";
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile`, {
+      // Guardar toda la información de contacto en una sola llamada
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contact-info`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ telefono: telefonoCompleto, direccion, linkedin })
+        body: JSON.stringify({ 
+          telefono: telefonoCompleto, 
+          direccion,
+          socialLinks 
+        })
       });
+      
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al guardar");
+      if (!res.ok) throw new Error(data.error || "Error al guardar información de contacto");
+
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2500);
-      setTimeout(() => setActiveTab("Experiencia"), 800);
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
       else setError("Error desconocido");
@@ -97,7 +161,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
           <h2 className="text-xl font-bold mb-4">Progreso</h2>
           <ul className="w-full flex flex-col gap-2">
             {[
-              "Datos personales",
+              "Información de contacto",
               "Experiencia",
               "Educación",
               "Habilidades",
@@ -119,9 +183,10 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
       <main className="flex-1 p-12 flex flex-col items-center justify-center">
         <h2 className="text-3xl font-bold text-blue-700 mb-8">{activeTab}</h2>
         
-        {/* Datos personales */}
-        {activeTab === "Datos personales" && (
+        {/* Información de contacto */}
+        {activeTab === "Información de contacto" && (
           <form className="w-full max-w-lg bg-white/80 rounded-2xl shadow-lg p-8 flex flex-col gap-6 border border-gray-200 backdrop-blur" onSubmit={handleSave}>
+            {/* Los datos se cargan automáticamente al montar el componente */}
             <div className="relative flex flex-col gap-2">
               <label className="block text-gray-700 font-semibold mb-2">Nombre completo</label>
               <div className="relative">
@@ -220,24 +285,219 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
               </div>
             </div>
             
+            {/* Redes Sociales */}
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">LinkedIn</label>
-              <div className="flex items-center gap-2">
-                <BsLinkedin style={{ fontSize: "2rem", color: "#5a6165ff" }} />
-                <input
-                  type="url"
-                  className="w-full px-4 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="https://linkedin.com/in/tuusuario"
-                  value={linkedin}
-                  onChange={e => setLinkedin(e.target.value)}
-                />
+              <label className="block text-gray-700 font-semibold mb-2">Redes Sociales</label>
+              
+              {/* Redes sociales existentes */}
+              <div className="space-y-2 mb-4">
+                {Object.entries(socialLinks).map(([platform, url]) => {
+                  const platformInfo = socialPlatforms[platform as keyof typeof socialPlatforms];
+                  const IconComponent = platformInfo?.icon || BsGlobe;
+                  
+                  // Si está en modo edición para esta plataforma
+                  if (editingPlatform === platform) {
+                    return (
+                      <div key={platform} className="flex items-center gap-3 py-2">
+                        {/* Ícono gris de la plataforma */}
+                        <div className="flex items-center justify-center w-6 h-6">
+                          <IconComponent style={{ fontSize: "1.2rem", color: "#6B7280" }} />
+                        </div>
+                        
+                        {/* Input para editar URL */}
+                        <input
+                          type="url"
+                          value={editingUrl}
+                          onChange={(e) => setEditingUrl(e.target.value)}
+                          className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          placeholder="URL del perfil"
+                          autoFocus
+                        />
+                        
+                        {/* Botón guardar */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (editingUrl.trim()) {
+                              setSocialLinks(prev => ({ ...prev, [platform]: editingUrl.trim() }));
+                            }
+                            setEditingPlatform(null);
+                            setEditingUrl("");
+                          }}
+                          className="text-gray-400 hover:text-green-500 transition-colors"
+                          title="Guardar"
+                        >
+                          <BsPlusCircle size={16} />
+                        </button>
+                        
+                        {/* Botón cancelar */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingPlatform(null);
+                            setEditingUrl("");
+                          }}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          title="Cancelar"
+                        >
+                          <BsXCircle size={16} />
+                        </button>
+                      </div>
+                    );
+                  }
+                  
+                  // Modo vista normal
+                  return (
+                    <div key={platform} className="flex items-center gap-3 py-2">
+                      {/* Ícono gris de la plataforma */}
+                      <div className="flex items-center justify-center w-6 h-6">
+                        <IconComponent style={{ fontSize: "1.2rem", color: "#6B7280" }} />
+                      </div>
+                      
+                      {/* Nombre de la plataforma */}
+                      <span className="flex-1 text-sm text-gray-700 font-medium">{platform}</span>
+                      
+                      {/* Botón editar */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingPlatform(platform);
+                          setEditingUrl(url);
+                        }}
+                        className="text-gray-400 hover:text-blue-500 transition-colors"
+                        title="Editar URL"
+                      >
+                        <BsPencil size={14} />
+                      </button>
+                      
+                      {/* Botón eliminar */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newLinks = { ...socialLinks };
+                          delete newLinks[platform];
+                          setSocialLinks(newLinks);
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Eliminar"
+                      >
+                        <BsTrash size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
+
+              {/* Agregar nueva red social */}
+              {!showAddSocial ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddSocial(true);
+                    setNewSocialPlatform("LinkedIn");
+                    setNewSocialUrl("");
+                  }}
+                  className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-all"
+                >
+                  + Agregar red social
+                </button>
+              ) : (
+                <div className="p-4">
+                  <div className="flex items-center gap-3">
+                    {/* Selector de plataforma con ícono */}
+                    <div className="relative platform-dropdown">
+                      <button
+                        type="button"
+                        onClick={() => setShowPlatformDropdown(!showPlatformDropdown)}
+                        className="flex items-center gap-2 px-3 py-2 bg-white border rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 min-w-[120px]"
+                      >
+                        {(() => {
+                          const platformInfo = socialPlatforms[newSocialPlatform as keyof typeof socialPlatforms];
+                          const IconComponent = platformInfo?.icon || BsLinkedin;
+                          return (
+                            <>
+                              <IconComponent style={{ fontSize: "1.2rem", color: "#6B7280" }} />
+                              <span className="text-sm text-gray-700">{newSocialPlatform}</span>
+                              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 20 20">
+                                <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </>
+                          );
+                        })()}
+                      </button>
+                      
+                      {/* Dropdown de plataformas */}
+                      {showPlatformDropdown && (
+                        <div className="absolute top-full left-0 mt-1 w-48 bg-white border rounded-lg shadow-lg z-50 max-h-64 overflow-auto">
+                          {Object.entries(socialPlatforms).map(([platform, info]) => (
+                            <button
+                              key={platform}
+                              type="button"
+                              className={`flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-gray-50 ${newSocialPlatform === platform ? 'bg-blue-50 font-medium' : ''}`}
+                              onClick={() => {
+                                setNewSocialPlatform(platform);
+                                setShowPlatformDropdown(false);
+                              }}
+                            >
+                              <info.icon style={{ fontSize: "1.2rem", color: "#6B7280" }} />
+                              <span className="text-sm text-gray-700">{platform}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Input de URL */}
+                    <input
+                      type="url"
+                      placeholder="URL del perfil"
+                      value={newSocialUrl}
+                      onChange={(e) => setNewSocialUrl(e.target.value)}
+                      className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                    />
+                    
+                    {/* Botones de acción */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newSocialPlatform && newSocialUrl.trim()) {
+                          const dbValue = socialPlatforms[newSocialPlatform as keyof typeof socialPlatforms]?.dbValue || newSocialPlatform;
+                          setSocialLinks(prev => ({ ...prev, [dbValue]: newSocialUrl.trim() }));
+                          setNewSocialPlatform("LinkedIn");
+                          setNewSocialUrl("");
+                          setShowAddSocial(false);
+                          setShowPlatformDropdown(false);
+                        }
+                      }}
+                      className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-green-500 hover:bg-green-50 rounded transition-all"
+                      disabled={!newSocialPlatform || !newSocialUrl.trim()}
+                      title="Agregar"
+                    >
+                      <BsPlusCircle size={18} />
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddSocial(false);
+                        setNewSocialPlatform("LinkedIn");
+                        setNewSocialUrl("");
+                        setShowPlatformDropdown(false);
+                      }}
+                      className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                      title="Cancelar"
+                    >
+                      <BsXCircle size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             
             <button type="submit" className="mt-4 px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-all" disabled={loading}>
               {loading ? "Guardando..." : "Guardar"}
             </button>
-            {success && <div className="text-green-600 text-sm text-center mt-2">¡Datos personales guardados! Ahora puedes agregar tu experiencia.</div>}
+            {success && <div className="text-green-600 text-sm text-center mt-2">¡Información de contacto guardada exitosamente!</div>}
             {error && <div className="text-red-500 text-sm text-center mt-2">{error}</div>}
           </form>
         )}
@@ -251,15 +511,67 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
           </>
         )}
         
-        {/* Otras pestañas por implementar */}
+        {/* Educación */}
         {activeTab === "Educación" && (
-          <div className="text-gray-500 text-center">Sección de Educación - Próximamente</div>
+          <div className="w-full max-w-4xl space-y-6">
+            {/* Educación Formal */}
+            <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
+              <h3 className="text-xl font-bold text-gray-800 mb-6">Educación Formal</h3>
+              <div className="text-gray-500 text-center py-8">
+                Formulario para agregar estudios universitarios, certificaciones, etc.
+                <br />
+                <span className="text-sm">Conectado a la tabla `education`</span>
+              </div>
+            </div>
+
+            {/* Certificaciones */}
+            <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
+              <h3 className="text-xl font-bold text-gray-800 mb-6">Certificaciones</h3>
+              <div className="text-gray-500 text-center py-8">
+                Formulario para agregar certificaciones profesionales
+                <br />
+                <span className="text-sm">Conectado a la tabla `certifications`</span>
+              </div>
+            </div>
+
+            {/* Enlaces del Portafolio */}
+            <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
+              <h3 className="text-xl font-bold text-gray-800 mb-6">Enlaces del Portafolio</h3>
+              <div className="text-gray-500 text-center py-8">
+                Sección para agregar enlaces de proyectos, LinkedIn, GitHub, etc.
+                <br />
+                <span className="text-sm">Conectado a la tabla `user_links`</span>
+              </div>
+            </div>
+          </div>
         )}
+
+        {/* Habilidades */}
         {activeTab === "Habilidades" && (
-          <div className="text-gray-500 text-center">Sección de Habilidades - Próximamente</div>
+          <div className="w-full max-w-4xl">
+            <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
+              <h3 className="text-xl font-bold text-gray-800 mb-6">Habilidades Técnicas y Profesionales</h3>
+              <div className="text-gray-500 text-center py-8">
+                Formulario para agregar habilidades con niveles de competencia
+                <br />
+                <span className="text-sm">Conectado a la tabla `skills`</span>
+              </div>
+            </div>
+          </div>
         )}
+
+        {/* Resumen */}
         {activeTab === "Resumen" && (
-          <div className="text-gray-500 text-center">Sección de Resumen - Próximamente</div>
+          <div className="w-full max-w-4xl">
+            <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
+              <h3 className="text-xl font-bold text-gray-800 mb-6">Resumen del Perfil</h3>
+              <div className="text-gray-500 text-center py-8">
+                Vista general de toda la información del perfil
+                <br />
+                <span className="text-sm">Próximamente disponible</span>
+              </div>
+            </div>
+          </div>
         )}
       </main>
 
