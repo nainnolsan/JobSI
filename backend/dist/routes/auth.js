@@ -285,4 +285,251 @@ router.post('/signin', async (req, res) => {
         res.status(500).json({ error: 'Server error', details: message });
     }
 });
+// ====== ENDPOINTS PARA EXPERIENCIA LABORAL ======
+// Obtener todas las experiencias del usuario
+router.get('/work-experiences', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    try {
+        const result = await db_1.pool.query(`SELECT id, category, time_type, empresa, puesto, fecha_inicio, fecha_fin, 
+              descripcion, ubicacion, created_at 
+       FROM work_experiences 
+       WHERE user_id = $1 
+       ORDER BY fecha_inicio DESC`, [userId]);
+        res.json(result.rows);
+    }
+    catch (err) {
+        console.error("Error getting work experiences:", err);
+        res.status(500).json({ error: 'Error obteniendo experiencias laborales' });
+    }
+});
+// Crear nueva experiencia laboral
+router.post('/work-experiences', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const { category, time_type, empresa, puesto, fecha_inicio, fecha_fin, descripcion, ubicacion } = req.body;
+    try {
+        const result = await db_1.pool.query(`INSERT INTO work_experiences (user_id, category, time_type, empresa, puesto, 
+                                   fecha_inicio, fecha_fin, descripcion, ubicacion) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+       RETURNING *`, [userId, category, time_type, empresa, puesto, fecha_inicio, fecha_fin || null, descripcion, ubicacion]);
+        res.status(201).json(result.rows[0]);
+    }
+    catch (err) {
+        console.error("Error creating work experience:", err);
+        res.status(500).json({ error: 'Error creando experiencia laboral' });
+    }
+});
+// Actualizar experiencia laboral
+router.put('/work-experiences/:id', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const experienceId = req.params.id;
+    const { category, time_type, empresa, puesto, fecha_inicio, fecha_fin, descripcion, ubicacion } = req.body;
+    try {
+        const result = await db_1.pool.query(`UPDATE work_experiences 
+       SET category = $1, time_type = $2, empresa = $3, puesto = $4, 
+           fecha_inicio = $5, fecha_fin = $6, descripcion = $7, ubicacion = $8
+       WHERE id = $9 AND user_id = $10 
+       RETURNING *`, [category, time_type, empresa, puesto, fecha_inicio, fecha_fin || null, descripcion, ubicacion, experienceId, userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Experiencia no encontrada' });
+        }
+        res.json(result.rows[0]);
+    }
+    catch (err) {
+        console.error("Error updating work experience:", err);
+        res.status(500).json({ error: 'Error actualizando experiencia laboral' });
+    }
+});
+// Eliminar experiencia laboral
+router.delete('/work-experiences/:id', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const experienceId = req.params.id;
+    try {
+        const result = await db_1.pool.query('DELETE FROM work_experiences WHERE id = $1 AND user_id = $2 RETURNING *', [experienceId, userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Experiencia no encontrada' });
+        }
+        res.json({ message: 'Experiencia eliminada exitosamente' });
+    }
+    catch (err) {
+        console.error("Error deleting work experience:", err);
+        res.status(500).json({ error: 'Error eliminando experiencia laboral' });
+    }
+});
+// ====== ENDPOINTS PARA EDUCACIÓN ======
+// Obtener todas las educaciones del usuario
+router.get('/education', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    try {
+        const result = await db_1.pool.query(`SELECT id, institution, degree, field_of_study, start_date, end_date, is_current, grade, description, created_at
+       FROM education WHERE user_id = $1 ORDER BY start_date DESC`, [userId]);
+        res.json(result.rows);
+    }
+    catch (err) {
+        console.error('Error getting education records:', err);
+        res.status(500).json({ error: 'Error obteniendo educación' });
+    }
+});
+// Crear nuevo registro de educación
+router.post('/education', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const { institution, degree, field_of_study, start_date, end_date, is_current, grade, description } = req.body;
+    try {
+        const result = await db_1.pool.query(`INSERT INTO education (user_id, institution, degree, field_of_study, start_date, end_date, is_current, grade, description)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`, [userId, institution, degree, field_of_study, start_date, end_date || null, is_current || false, grade || null, description || null]);
+        res.status(201).json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error creating education record:', err);
+        res.status(500).json({ error: 'Error creando educación' });
+    }
+});
+// Actualizar registro de educación
+router.put('/education/:id', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    const { institution, degree, field_of_study, start_date, end_date, is_current, grade, description } = req.body;
+    try {
+        const result = await db_1.pool.query(`UPDATE education SET institution=$1, degree=$2, field_of_study=$3, start_date=$4, end_date=$5, is_current=$6, grade=$7, description=$8
+       WHERE id=$9 AND user_id=$10 RETURNING *`, [institution, degree, field_of_study, start_date, end_date || null, is_current || false, grade || null, description || null, id, userId]);
+        if (result.rows.length === 0)
+            return res.status(404).json({ error: 'Registro de educación no encontrado' });
+        res.json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error updating education record:', err);
+        res.status(500).json({ error: 'Error actualizando educación' });
+    }
+});
+// Eliminar registro de educación
+router.delete('/education/:id', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    try {
+        const result = await db_1.pool.query('DELETE FROM education WHERE id=$1 AND user_id=$2 RETURNING *', [id, userId]);
+        if (result.rows.length === 0)
+            return res.status(404).json({ error: 'Registro de educación no encontrado' });
+        res.json({ message: 'Registro de educación eliminado' });
+    }
+    catch (err) {
+        console.error('Error deleting education record:', err);
+        res.status(500).json({ error: 'Error eliminando educación' });
+    }
+});
+// ====== ENDPOINTS PARA CERTIFICACIONES ======
+// Obtener certificaciones del usuario
+router.get('/certifications', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    try {
+        const result = await db_1.pool.query(`SELECT id, name, issuing_organization, issue_date, expiration_date, credential_id, credential_url, description, created_at
+       FROM certifications WHERE user_id=$1 ORDER BY issue_date DESC`, [userId]);
+        res.json(result.rows);
+    }
+    catch (err) {
+        console.error('Error getting certifications:', err);
+        res.status(500).json({ error: 'Error obteniendo certificaciones' });
+    }
+});
+// Crear certificación
+router.post('/certifications', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const { name, issuing_organization, issue_date, expiration_date, credential_id, credential_url, description } = req.body;
+    try {
+        const result = await db_1.pool.query(`INSERT INTO certifications (user_id, name, issuing_organization, issue_date, expiration_date, credential_id, credential_url, description)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [userId, name, issuing_organization, issue_date || null, expiration_date || null, credential_id || null, credential_url || null, description || null]);
+        res.status(201).json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error creating certification:', err);
+        res.status(500).json({ error: 'Error creando certificación' });
+    }
+});
+// Actualizar certificación
+router.put('/certifications/:id', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    const { name, issuing_organization, issue_date, expiration_date, credential_id, credential_url, description } = req.body;
+    try {
+        const result = await db_1.pool.query(`UPDATE certifications SET name=$1, issuing_organization=$2, issue_date=$3, expiration_date=$4, credential_id=$5, credential_url=$6, description=$7
+       WHERE id=$8 AND user_id=$9 RETURNING *`, [name, issuing_organization, issue_date || null, expiration_date || null, credential_id || null, credential_url || null, description || null, id, userId]);
+        if (result.rows.length === 0)
+            return res.status(404).json({ error: 'Certificación no encontrada' });
+        res.json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error updating certification:', err);
+        res.status(500).json({ error: 'Error actualizando certificación' });
+    }
+});
+// Eliminar certificación
+router.delete('/certifications/:id', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    try {
+        const result = await db_1.pool.query('DELETE FROM certifications WHERE id=$1 AND user_id=$2 RETURNING *', [id, userId]);
+        if (result.rows.length === 0)
+            return res.status(404).json({ error: 'Certificación no encontrada' });
+        res.json({ message: 'Certificación eliminada' });
+    }
+    catch (err) {
+        console.error('Error deleting certification:', err);
+        res.status(500).json({ error: 'Error eliminando certificación' });
+    }
+});
+// ====== ENDPOINTS PARA USER_LINKS (PORTAFOLIO) ======
+// Obtener links del usuario
+router.get('/user-links', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    try {
+        const result = await db_1.pool.query('SELECT id, type, title, url, is_public, display_order, created_at FROM user_links WHERE user_id=$1 ORDER BY display_order ASC', [userId]);
+        res.json(result.rows);
+    }
+    catch (err) {
+        console.error('Error getting user links:', err);
+        res.status(500).json({ error: 'Error obteniendo enlaces de usuario' });
+    }
+});
+// Crear link de usuario
+router.post('/user-links', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const { type, title, url, is_public, display_order } = req.body;
+    try {
+        const result = await db_1.pool.query(`INSERT INTO user_links (user_id, type, title, url, is_public, display_order) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [userId, type, title || null, url, is_public ?? true, display_order || 0]);
+        res.status(201).json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error creating user link:', err);
+        res.status(500).json({ error: 'Error creando enlace' });
+    }
+});
+// Actualizar link de usuario
+router.put('/user-links/:id', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    const { type, title, url, is_public, display_order } = req.body;
+    try {
+        const result = await db_1.pool.query(`UPDATE user_links SET type=$1, title=$2, url=$3, is_public=$4, display_order=$5 WHERE id=$6 AND user_id=$7 RETURNING *`, [type, title || null, url, is_public ?? true, display_order || 0, id, userId]);
+        if (result.rows.length === 0)
+            return res.status(404).json({ error: 'Enlace no encontrado' });
+        res.json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error updating user link:', err);
+        res.status(500).json({ error: 'Error actualizando enlace' });
+    }
+});
+// Eliminar link de usuario
+router.delete('/user-links/:id', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    try {
+        const result = await db_1.pool.query('DELETE FROM user_links WHERE id=$1 AND user_id=$2 RETURNING *', [id, userId]);
+        if (result.rows.length === 0)
+            return res.status(404).json({ error: 'Enlace no encontrado' });
+        res.json({ message: 'Enlace eliminado' });
+    }
+    catch (err) {
+        console.error('Error deleting user link:', err);
+        res.status(500).json({ error: 'Error eliminando enlace' });
+    }
+});
 exports.default = router;

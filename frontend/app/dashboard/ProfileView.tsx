@@ -4,12 +4,74 @@ import React, { useState, useEffect } from "react";
 import { countryPhoneDataFull } from '@/lib/countryPhoneDataFull';
 import { JWTPayload } from "@/lib/decodeJWT";
 import { BsLinkedin, BsInstagram, BsFacebook, BsTwitterX, BsGithub, BsYoutube, BsTiktok, BsGlobe, BsPlusCircle, BsXCircle, BsPencil, BsTrash } from "react-icons/bs";
-import ExperienceSection from "../../components/ExperienceSection";
-import InternshipSection from "../../components/InternshipSection";
-import PortfolioSection from "../../components/PortfolioSection";
 
 interface ProfileViewProps {
   jwtPayload: JWTPayload | null;
+}
+
+// Types used in this view
+interface WorkExperience {
+  id: number;
+  user_id?: number;
+  category: 'trabajo' | 'pasantia';
+  time_type: 'part_time' | 'full_time';
+  empresa: string;
+  puesto: string;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  descripcion?: string | null;
+  ubicacion?: string | null;
+  created_at?: string;
+}
+
+interface EditForm {
+  category: WorkExperience['category'];
+  time_type: WorkExperience['time_type'];
+  empresa: string;
+  puesto: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  descripcion: string;
+  ubicacion: string;
+  is_current: boolean;
+}
+
+interface Education {
+  id: number;
+  user_id?: number;
+  institution: string;
+  degree: string;
+  field_of_study?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  is_current?: boolean;
+  grade?: string | null;
+  description?: string | null;
+  created_at?: string;
+}
+
+interface Certification {
+  id: number;
+  user_id?: number;
+  name: string;
+  issuing_organization?: string | null;
+  issue_date?: string | null;
+  expiration_date?: string | null;
+  credential_id?: string | null;
+  credential_url?: string | null;
+  description?: string | null;
+  created_at?: string;
+}
+
+interface UserLink {
+  id: number;
+  user_id?: number;
+  type: string;
+  title?: string | null;
+  url: string;
+  is_public?: boolean;
+  display_order?: number;
+  created_at?: string;
 }
 
 export default function ProfileView({ jwtPayload }: ProfileViewProps) {
@@ -33,8 +95,55 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null);
   const [editingUrl, setEditingUrl] = useState("");
   
-  // Estado de carga para debug
-  const [dataLoaded, setDataLoaded] = useState(false);
+  // Estados para experiencia laboral
+  const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
+  const [editingExpId, setEditingExpId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState(false);
+  const [showAddExperience, setShowAddExperience] = useState(false);
+  const [experienceLoading, setExperienceLoading] = useState(false);
+  const [experienceError, setExperienceError] = useState<string | null>(null);
+  const [experienceSuccess, setExperienceSuccess] = useState(false);
+  
+  // Estado del formulario de experiencia
+  const [experienceForm, setExperienceForm] = useState({
+    category: 'trabajo',
+    time_type: 'full_time',
+    empresa: '',
+    puesto: '',
+    fecha_inicio: '',
+    fecha_fin: '',
+    descripcion: '',
+    ubicacion: '',
+    is_current: false
+  });
+  
+  // Estado de carga para debug (removed unused state)
+
+  // Educación / Certificaciones / Enlaces (frontend states)
+  const [educationList, setEducationList] = useState<Education[]>([]);
+  const [educationFormState, setEducationFormState] = useState({
+    institution: '', degree: '', field_of_study: '', start_date: '', end_date: '', is_current: false, grade: '', description: ''
+  });
+  const [educationLoading, setEducationLoading] = useState(false);
+  const [educationError, setEducationError] = useState<string | null>(null);
+  const [showEducationForm, setShowEducationForm] = useState(false);
+
+  const [certificationsList, setCertificationsList] = useState<Certification[]>([]);
+  const [certFormState, setCertFormState] = useState({
+    name: '', issuing_organization: '', issue_date: '', expiration_date: '', credential_id: '', credential_url: '', description: ''
+  });
+  const [certLoading, setCertLoading] = useState(false);
+  const [certError, setCertError] = useState<string | null>(null);
+  const [showCertForm, setShowCertForm] = useState(false);
+
+  const [userLinksList, setUserLinksList] = useState<UserLink[]>([]);
+  const [linkFormState, setLinkFormState] = useState({ type: 'portfolio', title: '', url: '', is_public: true, display_order: 0 });
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [showLinkForm, setShowLinkForm] = useState(false);
 
   // Mapeo de plataformas con íconos y colores
   const socialPlatforms = {
@@ -103,11 +212,11 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
           setSocialLinks({ LinkedIn: data.linkedin });
         }
         
-        setDataLoaded(true);
+  // data loaded
       })
       .catch(error => {
         console.error("Error al cargar datos del usuario:", error);
-        setDataLoaded(true);
+  // data loaded
       });
   }, []);
 
@@ -150,6 +259,251 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
       setTimeout(() => setError(null), 3500);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ====== FUNCIONES PARA EXPERIENCIA LABORAL ======
+  
+  // Cargar experiencias del usuario
+  const loadWorkExperiences = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/work-experiences`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const experiences = await res.json();
+        setWorkExperiences(experiences);
+      }
+    } catch (err) {
+      console.error("Error loading work experiences:", err);
+    }
+  };
+
+  // Agregar nueva experiencia
+  const handleAddExperience = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setExperienceLoading(true);
+    setExperienceError(null);
+    
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setExperienceError("No hay token de autenticación");
+      setExperienceLoading(false);
+      return;
+    }
+
+    try {
+      const formData = { ...experienceForm };
+      
+      // Si es trabajo actual, no enviar fecha_fin
+      if (formData.is_current) {
+        formData.fecha_fin = '';
+      }
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/work-experiences`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al crear experiencia");
+
+      // Recargar experiencias y resetear formulario
+      await loadWorkExperiences();
+      setExperienceForm({
+        category: 'trabajo',
+        time_type: 'full_time',
+        empresa: '',
+        puesto: '',
+        fecha_inicio: '',
+        fecha_fin: '',
+        descripcion: '',
+        ubicacion: '',
+        is_current: false
+      });
+      setShowAddExperience(false);
+      setExperienceSuccess(true);
+      setTimeout(() => setExperienceSuccess(false), 2500);
+      
+    } catch (err: unknown) {
+      if (err instanceof Error) setExperienceError(err.message);
+      else setExperienceError("Error desconocido");
+      setTimeout(() => setExperienceError(null), 3500);
+    } finally {
+      setExperienceLoading(false);
+    }
+  };
+
+  // Eliminar experiencia
+  const handleDeleteExperience = async (id: number) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/work-experiences/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        await loadWorkExperiences();
+      }
+    } catch (err) {
+      console.error("Error deleting experience:", err);
+    }
+  };
+
+  // Editar experiencia: iniciar edición
+  const startEditExperience = (exp: WorkExperience) => {
+    setEditingExpId(exp.id);
+    setEditForm({
+      category: exp.category,
+      time_type: exp.time_type,
+      empresa: exp.empresa,
+      puesto: exp.puesto,
+      fecha_inicio: exp.fecha_inicio ? exp.fecha_inicio.substring(0,10) : '',
+      fecha_fin: exp.fecha_fin ? exp.fecha_fin.substring(0,10) : '',
+      descripcion: exp.descripcion || '',
+      ubicacion: exp.ubicacion || '',
+      is_current: !exp.fecha_fin
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingExpId(null);
+    setEditForm(null);
+  };
+
+  const saveEditExperience = async (id: number) => {
+    if (!editForm) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setEditError('No autenticado');
+      return;
+    }
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      const payload = { ...editForm };
+      if (payload.is_current) payload.fecha_fin = '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/work-experiences/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error updating experience');
+      await loadWorkExperiences();
+      setEditSuccess(true);
+      setTimeout(() => setEditSuccess(false), 2500);
+      cancelEdit();
+    } catch (err: unknown) {
+      console.error('Error saving experience', err);
+      if (err instanceof Error) setEditError(err.message);
+      else setEditError('Error desconocido');
+      setTimeout(() => setEditError(null), 3500);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // Cargar experiencias al montar el componente
+  useEffect(() => {
+    if (jwtPayload) {
+      loadWorkExperiences();
+      loadEducation();
+      loadCertifications();
+      loadUserLinks();
+    }
+  }, [jwtPayload]);
+
+  // Load education
+  const loadEducation = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/education`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setEducationList(data);
+      }
+    } catch (err) {
+      console.error('Error loading education', err);
+    }
+  };
+
+  const createEducation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEducationLoading(true);
+    setEducationError(null);
+    const token = localStorage.getItem('token');
+    if (!token) { setEducationError('No autenticado'); setEducationLoading(false); return; }
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/education`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(educationFormState)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error creando educación');
+      await loadEducation();
+      setEducationFormState({ institution: '', degree: '', field_of_study: '', start_date: '', end_date: '', is_current: false, grade: '', description: '' });
+    } catch (err: unknown) {
+      if (err instanceof Error) setEducationError(err.message); else setEducationError('Error desconocido');
+    } finally { setEducationLoading(false); }
+  };
+
+  const deleteEducation = async (id: number) => {
+    const token = localStorage.getItem('token'); if (!token) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/education/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) await loadEducation();
+    } catch (err) { console.error('Error deleting education', err); }
+  };
+
+  // Certifications
+  const loadCertifications = async () => {
+    const token = localStorage.getItem('token'); if (!token) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/certifications`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setCertificationsList(await res.json());
+    } catch (err) { console.error('Error loading certs', err); }
+  };
+
+  const createCertification = async (e: React.FormEvent) => {
+    e.preventDefault(); setCertLoading(true); setCertError(null);
+    const token = localStorage.getItem('token'); if (!token) { setCertError('No autenticado'); setCertLoading(false); return; }
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/certifications`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(certFormState) });
+      const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Error creando certificación');
+      await loadCertifications();
+      setCertFormState({ name: '', issuing_organization: '', issue_date: '', expiration_date: '', credential_id: '', credential_url: '', description: '' });
+    } catch (err: unknown) { if (err instanceof Error) setCertError(err.message); else setCertError('Error desconocido'); } finally { setCertLoading(false); }
+  };
+
+  const deleteCertification = async (id: number) => { const token = localStorage.getItem('token'); if (!token) return; try { const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/certifications/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }); if (res.ok) await loadCertifications(); } catch (err) { console.error('Error deleting cert', err); } };
+
+  // User links (portfolio)
+  const loadUserLinks = async () => { const token = localStorage.getItem('token'); if (!token) return; try { const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user-links`, { headers: { Authorization: `Bearer ${token}` } }); if (res.ok) setUserLinksList(await res.json()); } catch (err) { console.error('Error loading user links', err); } };
+
+  const createUserLink = async (e: React.FormEvent) => { e.preventDefault(); setLinkLoading(true); setLinkError(null); const token = localStorage.getItem('token'); if (!token) { setLinkError('No autenticado'); setLinkLoading(false); return; } try { const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user-links`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(linkFormState) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Error creando enlace'); await loadUserLinks(); setLinkFormState({ type: 'portfolio', title: '', url: '', is_public: true, display_order: 0 }); } catch (err: unknown) { if (err instanceof Error) setLinkError(err.message); else setLinkError('Error desconocido'); } finally { setLinkLoading(false); } };
+
+  const deleteUserLink = async (id: number) => { const token = localStorage.getItem('token'); if (!token) return; try { const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user-links/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }); if (res.ok) await loadUserLinks(); } catch (err) { console.error('Error deleting link', err); } };
+
+  // Helper para mostrar fechas en formato 'Sep 2025'
+  const formatDate = (isoDate: string | null | undefined) => {
+    if (!isoDate) return '';
+    try {
+      const d = new Date(isoDate);
+      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
+    } catch {
+      return isoDate;
     }
   };
 
@@ -504,43 +858,496 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
         
         {/* Experiencia */}
         {activeTab === "Experiencia" && (
-          <>
-            <ExperienceSection />
-            <InternshipSection />
-            <PortfolioSection />
-          </>
+          <div className="w-full max-w-3xl space-y-6">
+            {/* Clasificar experiencias */}
+            {(() => {
+              // Categorizar experiencias
+              const internshipsAll = workExperiences.filter(e => e.category === 'pasantia');
+
+              // Trabajo actual: todos los items sin fecha_fin (incluye pasantías actuales)
+              const currentJobs = workExperiences.filter(e => !e.fecha_fin);
+
+              // Trabajos pasados: sólo category 'trabajo' con fecha_fin
+              const pastJobs = workExperiences.filter(e => e.category === 'trabajo' && !!e.fecha_fin);
+
+              return (
+                <>
+                  {/* Trabajo Actual */}
+                  {currentJobs.length > 0 && (
+                    <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur max-w-2xl mx-auto">
+                      <h3 className="text-xl font-bold text-gray-800 mb-6">Trabajo Actual</h3>
+                      <div className="space-y-4">
+                        {currentJobs.map((exp) => (
+                          <div key={exp.id} className="border-l-4 border-green-500 pl-3 py-1.5">
+                            {editingExpId === exp.id ? (
+                              <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <input className="px-2 py-1 border rounded" value={editForm?.empresa} onChange={(e) => setEditForm((p)=>({...(p as EditForm), empresa: e.target.value}))} />
+                                  <input className="px-2 py-1 border rounded" value={editForm?.puesto} onChange={(e) => setEditForm((p)=>({...(p as EditForm), puesto: e.target.value}))} />
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <input type="date" className="px-2 py-1 border rounded" value={editForm?.fecha_inicio} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), fecha_inicio:e.target.value}))} />
+                                  <input type="date" className="px-2 py-1 border rounded" value={editForm?.fecha_fin} disabled={editForm?.is_current} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), fecha_fin:e.target.value}))} />
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={editForm?.is_current} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), is_current: e.target.checked, fecha_fin: e.target.checked ? '' : (p as EditForm).fecha_fin}))} /> Actual</label>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={() => saveEditExperience(exp.id)} disabled={editLoading} className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-60">{editLoading ? 'Guardando...' : 'Guardar'}</button>
+                                  <button onClick={cancelEdit} className="px-3 py-1 bg-gray-200 rounded">Cancelar</button>
+                                </div>
+                                {editSuccess && <div className="text-green-600 text-sm mt-2">Guardado</div>}
+                                {editError && <div className="text-red-500 text-sm mt-2">{editError}</div>}
+                              </div>
+                            ) : (
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-lg text-gray-800">{exp.puesto}</h4>
+                                  <p className="text-gray-600 font-medium">{exp.empresa}</p>
+                                  <p className="text-sm text-gray-500">{exp.ubicacion}</p>
+                                  <p className="text-sm text-gray-500">
+                                    {formatDate(exp.fecha_inicio)} - Actualidad
+                                    {exp.time_type === 'part_time' && ' (Medio tiempo)'}
+                                  </p>
+                                  {exp.descripcion && (
+                                    <p className="mt-2 text-gray-700 text-sm">{exp.descripcion}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <button onClick={() => startEditExperience(exp)} className="text-gray-500 hover:text-blue-600" title="Editar"><BsPencil size={14} /></button>
+                                  <button onClick={() => handleDeleteExperience(exp.id)} className="text-gray-400 hover:text-red-500 ml-3" title="Eliminar"><BsTrash size={14} /></button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Trabajos Pasados */}
+                  {pastJobs.length > 0 && (
+                    <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur max-w-2xl mx-auto">
+                      <h3 className="text-xl font-bold text-gray-800 mb-6">Trabajos Pasados</h3>
+                      <div className="space-y-4">
+                        {pastJobs.map((exp) => (
+                          <div key={exp.id} className="border-l-4 border-blue-500 pl-3 py-1.5">
+                            {editingExpId === exp.id ? (
+                              <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <input className="px-2 py-1 border rounded" value={editForm?.empresa} onChange={(e) => setEditForm((p)=>({...(p as EditForm), empresa: e.target.value}))} />
+                                  <input className="px-2 py-1 border rounded" value={editForm?.puesto} onChange={(e) => setEditForm((p)=>({...(p as EditForm), puesto: e.target.value}))} />
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <input type="date" className="px-2 py-1 border rounded" value={editForm?.fecha_inicio} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), fecha_inicio:e.target.value}))} />
+                                  <input type="date" className="px-2 py-1 border rounded" value={editForm?.fecha_fin} disabled={editForm?.is_current} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), fecha_fin:e.target.value}))} />
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={editForm?.is_current} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), is_current: e.target.checked, fecha_fin: e.target.checked ? '' : (p as EditForm).fecha_fin}))} /> Actual</label>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={() => saveEditExperience(exp.id)} disabled={editLoading} className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-60">{editLoading ? 'Guardando...' : 'Guardar'}</button>
+                                  <button onClick={cancelEdit} className="px-3 py-1 bg-gray-200 rounded">Cancelar</button>
+                                </div>
+                                {editSuccess && <div className="text-green-600 text-sm mt-2">Guardado</div>}
+                                {editError && <div className="text-red-500 text-sm mt-2">{editError}</div>}
+                              </div>
+                            ) : (
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-lg text-gray-800">{exp.puesto}</h4>
+                                  <p className="text-gray-600 font-medium">{exp.empresa}</p>
+                                  <p className="text-sm text-gray-500">{exp.ubicacion}</p>
+                                  <p className="text-sm text-gray-500">
+                                    {formatDate(exp.fecha_inicio)} - {formatDate(exp.fecha_fin)}
+                                    {exp.time_type === 'part_time' && ' (Medio tiempo)'}
+                                  </p>
+                                  {exp.descripcion && (
+                                    <p className="mt-2 text-gray-700 text-sm">{exp.descripcion}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <button onClick={() => startEditExperience(exp)} className="text-gray-500 hover:text-blue-600" title="Editar"><BsPencil size={14} /></button>
+                                  <button onClick={() => handleDeleteExperience(exp.id)} className="text-gray-400 hover:text-red-500 ml-3" title="Eliminar"><BsTrash size={14} /></button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pasantías */}
+                  {internshipsAll.length > 0 && (
+                    <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur max-w-2xl mx-auto">
+                      <h3 className="text-xl font-bold text-gray-800 mb-6">Pasantías</h3>
+                      <div className="space-y-4">
+                        {internshipsAll.map((exp) => (
+                          <div key={exp.id} className="border-l-4 border-purple-500 pl-3 py-1.5">
+                            {editingExpId === exp.id ? (
+                              <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <input className="px-2 py-1 border rounded" value={editForm?.empresa} onChange={(e) => setEditForm((p)=>({...(p as EditForm), empresa: e.target.value}))} />
+                                  <input className="px-2 py-1 border rounded" value={editForm?.puesto} onChange={(e) => setEditForm((p)=>({...(p as EditForm), puesto: e.target.value}))} />
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <input type="date" className="px-2 py-1 border rounded" value={editForm?.fecha_inicio} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), fecha_inicio:e.target.value}))} />
+                                  <input type="date" className="px-2 py-1 border rounded" value={editForm?.fecha_fin} disabled={editForm?.is_current} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), fecha_fin:e.target.value}))} />
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={editForm?.is_current} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), is_current: e.target.checked, fecha_fin: e.target.checked ? '' : (p as EditForm).fecha_fin}))} /> Actual</label>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={() => saveEditExperience(exp.id)} disabled={editLoading} className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-60">{editLoading ? 'Guardando...' : 'Guardar'}</button>
+                                  <button onClick={cancelEdit} className="px-3 py-1 bg-gray-200 rounded">Cancelar</button>
+                                </div>
+                                {editSuccess && <div className="text-green-600 text-sm mt-2">Guardado</div>}
+                                {editError && <div className="text-red-500 text-sm mt-2">{editError}</div>}
+                              </div>
+                            ) : (
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-lg text-gray-800">{exp.puesto}</h4>
+                                  <p className="text-gray-600 font-medium">{exp.empresa}</p>
+                                  <p className="text-sm text-gray-500">{exp.ubicacion}</p>
+                                  <p className="text-sm text-gray-500">
+                                    {formatDate(exp.fecha_inicio)} - 
+                                    {exp.fecha_fin ? formatDate(exp.fecha_fin) : ' Actualidad'}
+                                    {exp.time_type === 'part_time' && ' (Medio tiempo)'}
+                                  </p>
+                                  {exp.descripcion && (
+                                    <p className="mt-2 text-gray-700 text-sm">{exp.descripcion}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <button onClick={() => startEditExperience(exp)} className="text-gray-500 hover:text-blue-600" title="Editar"><BsPencil size={14} /></button>
+                                  <button onClick={() => handleDeleteExperience(exp.id)} className="text-gray-400 hover:text-red-500 ml-3" title="Eliminar"><BsTrash size={14} /></button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Formulario para agregar experiencia */}
+                  {(workExperiences.length === 0 || showAddExperience) && (
+                    <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
+                      <h3 className="text-xl font-bold text-gray-800 mb-6">
+                        {workExperiences.length === 0 ? 'Agregar tu primera experiencia' : 'Agregar nueva experiencia'}
+                      </h3>
+                      
+                      <form onSubmit={handleAddExperience} className="space-y-4">
+                        {/* Tipo de experiencia */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-gray-700 font-semibold mb-2">Tipo</label>
+                            <select
+                              value={experienceForm.category}
+                              onChange={(e) => setExperienceForm(prev => ({...prev, category: e.target.value}))}
+                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="trabajo">Trabajo</option>
+                              <option value="pasantia">Pasantía</option>
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-gray-700 font-semibold mb-2">Modalidad</label>
+                            <select
+                              value={experienceForm.time_type}
+                              onChange={(e) => setExperienceForm(prev => ({...prev, time_type: e.target.value}))}
+                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="full_time">Tiempo completo</option>
+                              <option value="part_time">Medio tiempo</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Empresa y puesto */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-gray-700 font-semibold mb-2">Empresa</label>
+                            <input
+                              type="text"
+                              required
+                              value={experienceForm.empresa}
+                              onChange={(e) => setExperienceForm(prev => ({...prev, empresa: e.target.value}))}
+                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Nombre de la empresa"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-gray-700 font-semibold mb-2">Puesto</label>
+                            <input
+                              type="text"
+                              required
+                              value={experienceForm.puesto}
+                              onChange={(e) => setExperienceForm(prev => ({...prev, puesto: e.target.value}))}
+                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Tu puesto de trabajo"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Ubicación */}
+                        <div>
+                          <label className="block text-gray-700 font-semibold mb-2">Ubicación</label>
+                          <input
+                            type="text"
+                            value={experienceForm.ubicacion}
+                            onChange={(e) => setExperienceForm(prev => ({...prev, ubicacion: e.target.value}))}
+                            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Ciudad, País"
+                          />
+                        </div>
+
+                        {/* Fechas */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-gray-700 font-semibold mb-2">Fecha de inicio</label>
+                            <input
+                              type="date"
+                              required
+                              value={experienceForm.fecha_inicio}
+                              onChange={(e) => setExperienceForm(prev => ({...prev, fecha_inicio: e.target.value}))}
+                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-gray-700 font-semibold mb-2">Fecha de fin</label>
+                            <div className="space-y-2">
+                              <input
+                                type="date"
+                                disabled={experienceForm.is_current}
+                                value={experienceForm.is_current ? '' : experienceForm.fecha_fin}
+                                onChange={(e) => setExperienceForm(prev => ({...prev, fecha_fin: e.target.value}))}
+                                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                              />
+                              <label className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={experienceForm.is_current}
+                                  onChange={(e) => setExperienceForm(prev => ({
+                                    ...prev, 
+                                    is_current: e.target.checked,
+                                    fecha_fin: e.target.checked ? '' : prev.fecha_fin
+                                  }))}
+                                  className="mr-2"
+                                />
+                                <span className="text-sm text-gray-600">Trabajo actual</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Descripción */}
+                        <div>
+                          <label className="block text-gray-700 font-semibold mb-2">Descripción</label>
+                          <textarea
+                            value={experienceForm.descripcion}
+                            onChange={(e) => setExperienceForm(prev => ({...prev, descripcion: e.target.value}))}
+                            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            rows={3}
+                            placeholder="Describe tus responsabilidades y logros..."
+                          />
+                        </div>
+
+                        {/* Botones */}
+                        <div className="flex gap-4 pt-4">
+                          <button
+                            type="submit"
+                            disabled={experienceLoading}
+                            className="px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
+                          >
+                            {experienceLoading ? "Guardando..." : "Guardar Experiencia"}
+                          </button>
+                          
+                          {workExperiences.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowAddExperience(false);
+                                setExperienceForm({
+                                  category: 'trabajo',
+                                  time_type: 'full_time',
+                                  empresa: '',
+                                  puesto: '',
+                                  fecha_inicio: '',
+                                  fecha_fin: '',
+                                  descripcion: '',
+                                  ubicacion: '',
+                                  is_current: false
+                                });
+                              }}
+                              className="px-6 py-2 bg-gray-500 text-white rounded font-bold hover:bg-gray-600 transition-all"
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
+
+                        {experienceSuccess && <div className="text-green-600 text-sm">¡Experiencia guardada exitosamente!</div>}
+                        {experienceError && <div className="text-red-500 text-sm">{experienceError}</div>}
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Botón para agregar más experiencias */}
+                  {workExperiences.length > 0 && !showAddExperience && (
+                    <div className="text-center">
+                      <button
+                        onClick={() => setShowAddExperience(true)}
+                        className="px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-all inline-flex items-center gap-2"
+                      >
+                        <BsPlusCircle size={18} />
+                        Agregar más experiencia
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
         )}
         
         {/* Educación */}
         {activeTab === "Educación" && (
           <div className="w-full max-w-4xl space-y-6">
-            {/* Educación Formal */}
-            <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
-              <h3 className="text-xl font-bold text-gray-800 mb-6">Educación Formal</h3>
-              <div className="text-gray-500 text-center py-8">
-                Formulario para agregar estudios universitarios, certificaciones, etc.
-                <br />
-                <span className="text-sm">Conectado a la tabla `education`</span>
+            {/* Educación Formal - Lista y formulario */}
+            <div className="bg-white/80 rounded-2xl shadow-lg p-6 border border-gray-200 backdrop-blur">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Educación Formal</h3>
+              <div className="space-y-4">
+                {educationList.length === 0 ? (
+                  <div className="text-gray-500">No hay registros de educación todavía.</div>
+                ) : (
+                  educationList.map(ed => (
+                    <div key={ed.id} className="flex justify-between items-start p-2 border-b">
+                      <div>
+                        <div className="font-semibold">{ed.degree} — {ed.institution}</div>
+                        <div className="text-sm text-gray-600">{ed.field_of_study || ''} • {formatDate(ed.start_date)} - {ed.is_current ? 'Actualidad' : formatDate(ed.end_date)}</div>
+                        {ed.description && <div className="text-sm text-gray-700 mt-1">{ed.description}</div>}
+                      </div>
+                      <div>
+                        <button onClick={() => deleteEducation(ed.id)} className="text-red-500">Eliminar</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                <div className="pt-2 border-t pt-4">
+                  {!showEducationForm ? (
+                    <div className="text-center">
+                      <button type="button" onClick={() => setShowEducationForm(true)} className="px-4 py-2 bg-green-600 text-white rounded">+ Agregar educación</button>
+                    </div>
+                  ) : (
+                    <form onSubmit={createEducation} className="pt-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <input required placeholder="Institución" value={educationFormState.institution} onChange={e=>setEducationFormState(prev=>({...prev,institution:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <input required placeholder="Título / Grado" value={educationFormState.degree} onChange={e=>setEducationFormState(prev=>({...prev,degree:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <input placeholder="Área de estudio" value={educationFormState.field_of_study} onChange={e=>setEducationFormState(prev=>({...prev,field_of_study:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <input type="date" value={educationFormState.start_date} onChange={e=>setEducationFormState(prev=>({...prev,start_date:e.target.value}))} className="px-3 py-2 border rounded" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <input type="date" disabled={educationFormState.is_current} value={educationFormState.end_date} onChange={e=>setEducationFormState(prev=>({...prev,end_date:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={educationFormState.is_current} onChange={e=>setEducationFormState(prev=>({...prev,is_current:e.target.checked, end_date: e.target.checked ? '' : prev.end_date}))} /> Actualmente estudio aquí</label>
+                  </div>
+                  <textarea placeholder="Descripción (opcional)" value={educationFormState.description} onChange={e=>setEducationFormState(prev=>({...prev,description:e.target.value}))} className="w-full px-3 py-2 border rounded mt-3" />
+                  <div className="flex gap-2 mt-3">
+                    <button type="submit" disabled={educationLoading} className="px-4 py-2 bg-blue-600 text-white rounded">{educationLoading ? 'Guardando...' : 'Agregar educación'}</button>
+                    {educationError && <div className="text-red-500">{educationError}</div>}
+                  </div>
+                    </form>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Certificaciones */}
-            <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
-              <h3 className="text-xl font-bold text-gray-800 mb-6">Certificaciones</h3>
-              <div className="text-gray-500 text-center py-8">
-                Formulario para agregar certificaciones profesionales
-                <br />
-                <span className="text-sm">Conectado a la tabla `certifications`</span>
+            <div className="bg-white/80 rounded-2xl shadow-lg p-6 border border-gray-200 backdrop-blur">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Certificaciones</h3>
+              <div className="space-y-4">
+                {certificationsList.length === 0 ? (
+                  <div className="text-gray-500">No hay certificaciones agregadas.</div>
+                ) : (
+                  certificationsList.map(c => (
+                    <div key={c.id} className="flex justify-between items-start p-2 border-b">
+                      <div>
+                        <div className="font-semibold">{c.name} — {c.issuing_organization}</div>
+                        <div className="text-sm text-gray-600">Emitido: {formatDate(c.issue_date)} {c.expiration_date ? ' • Expira: ' + formatDate(c.expiration_date) : ''}</div>
+                        {c.description && <div className="text-sm text-gray-700 mt-1">{c.description}</div>}
+                      </div>
+                      <div>
+                        <button onClick={() => deleteCertification(c.id)} className="text-red-500">Eliminar</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                <div className="pt-2 border-t pt-4">
+                  {!showCertForm ? (
+                    <div className="text-center">
+                      <button type="button" onClick={() => setShowCertForm(true)} className="px-4 py-2 bg-green-600 text-white rounded">+ Agregar certificación</button>
+                    </div>
+                  ) : (
+                    <form onSubmit={createCertification} className="pt-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <input required placeholder="Nombre de la certificación" value={certFormState.name} onChange={e=>setCertFormState(prev=>({...prev,name:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <input placeholder="Organización emisora" value={certFormState.issuing_organization} onChange={e=>setCertFormState(prev=>({...prev,issuing_organization:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <input type="date" value={certFormState.issue_date} onChange={e=>setCertFormState(prev=>({...prev,issue_date:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <input type="date" value={certFormState.expiration_date} onChange={e=>setCertFormState(prev=>({...prev,expiration_date:e.target.value}))} className="px-3 py-2 border rounded" />
+                  </div>
+                  <input placeholder="ID del certificado (opcional)" value={certFormState.credential_id} onChange={e=>setCertFormState(prev=>({...prev,credential_id:e.target.value}))} className="px-3 py-2 border rounded mt-3" />
+                  <input placeholder="URL de verificación (opcional)" value={certFormState.credential_url} onChange={e=>setCertFormState(prev=>({...prev,credential_url:e.target.value}))} className="px-3 py-2 border rounded mt-3" />
+                  <textarea placeholder="Descripción (opcional)" value={certFormState.description} onChange={e=>setCertFormState(prev=>({...prev,description:e.target.value}))} className="w-full px-3 py-2 border rounded mt-3" />
+                  <div className="flex gap-2 mt-3">
+                    <button type="submit" disabled={certLoading} className="px-4 py-2 bg-blue-600 text-white rounded">{certLoading ? 'Guardando...' : 'Agregar certificación'}</button>
+                    {certError && <div className="text-red-500">{certError}</div>}
+                  </div>
+                    </form>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Enlaces del Portafolio */}
-            <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
-              <h3 className="text-xl font-bold text-gray-800 mb-6">Enlaces del Portafolio</h3>
-              <div className="text-gray-500 text-center py-8">
-                Sección para agregar enlaces de proyectos, LinkedIn, GitHub, etc.
-                <br />
-                <span className="text-sm">Conectado a la tabla `user_links`</span>
+            {/* Enlaces de portafolio (user_links) */}
+            <div className="bg-white/80 rounded-2xl shadow-lg p-6 border border-gray-200 backdrop-blur">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Enlaces del Portafolio</h3>
+              <div className="space-y-4">
+                {userLinksList.length === 0 ? (
+                  <div className="text-gray-500">No hay enlaces.</div>
+                ) : (
+                  userLinksList.map(l => (
+                    <div key={l.id} className="flex justify-between items-start p-2 border-b">
+                      <div>
+                        <div className="font-semibold">{l.title || l.type}</div>
+                        <div className="text-sm text-gray-600"><a href={l.url} target="_blank" rel="noreferrer" className="text-blue-600">{l.url}</a></div>
+                      </div>
+                      <div>
+                        <button onClick={() => deleteUserLink(l.id)} className="text-red-500">Eliminar</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                <div className="pt-2 border-t pt-4">
+                  {!showLinkForm ? (
+                    <div className="text-center">
+                      <button type="button" onClick={() => setShowLinkForm(true)} className="px-4 py-2 bg-green-600 text-white rounded">+ Agregar enlace</button>
+                    </div>
+                  ) : (
+                    <form onSubmit={createUserLink} className="pt-2">
+                  <div className="grid grid-cols-3 gap-3">
+                    <input placeholder="Tipo (github, portfolio...)" value={linkFormState.type} onChange={e=>setLinkFormState(prev=>({...prev,type:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <input placeholder="Título (opcional)" value={linkFormState.title} onChange={e=>setLinkFormState(prev=>({...prev,title:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <input placeholder="URL" required value={linkFormState.url} onChange={e=>setLinkFormState(prev=>({...prev,url:e.target.value}))} className="px-3 py-2 border rounded" />
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button type="submit" disabled={linkLoading} className="px-4 py-2 bg-blue-600 text-white rounded">{linkLoading ? 'Guardando...' : 'Agregar enlace'}</button>
+                    {linkError && <div className="text-red-500">{linkError}</div>}
+                  </div>
+                    </form>
+                  )}
+                </div>
               </div>
             </div>
           </div>
