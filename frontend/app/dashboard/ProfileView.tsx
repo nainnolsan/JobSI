@@ -74,6 +74,17 @@ interface UserLink {
   created_at?: string;
 }
 
+interface Skill {
+  id: number;
+  user_id?: number;
+  name: string;
+  category?: string | null;
+  level?: string | null;
+  years_experience?: number | null;
+  description?: string | null;
+  created_at?: string;
+}
+
 export default function ProfileView({ jwtPayload }: ProfileViewProps) {
   // Estado para información de contacto
   const [telefono, setTelefono] = useState("");
@@ -144,6 +155,19 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [showLinkForm, setShowLinkForm] = useState(false);
+
+  // Estado para habilidades
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [skillForm, setSkillForm] = useState({
+    name: '',
+    category: '',
+    level: '',
+    years_experience: '',
+    description: ''
+  });
+  const [skillsLoading, setSkillsLoading] = useState(false);
+  const [skillsError, setSkillsError] = useState<string | null>(null);
+  const [showSkillForm, setShowSkillForm] = useState(false);
 
   // Mapeo de plataformas con íconos y colores
   const socialPlatforms = {
@@ -422,6 +446,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
       loadEducation();
       loadCertifications();
       loadUserLinks();
+      loadSkills();
     }
   }, [jwtPayload]);
 
@@ -504,6 +529,98 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
       return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
     } catch {
       return isoDate;
+    }
+  };
+
+  // Helper para mostrar fechas en formato bonito
+  const formatPrettyDate = (isoDate: string | null | undefined) => {
+    if (!isoDate) return '';
+    try {
+      const d = new Date(isoDate);
+      return d.toLocaleDateString('es-MX', { year: 'numeric', month: 'long' });
+    } catch {
+      return isoDate;
+    }
+  };
+
+  // Cargar habilidades
+  const loadSkills = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setSkillsError('No autenticado. Inicia sesión para ver tus habilidades.');
+      return;
+    }
+    setSkillsLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/skills`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setSkills(await res.json());
+        setSkillsError(null);
+      } else {
+        const data = await res.json();
+        if (res.status === 401) {
+          setSkillsError('No autenticado o token inválido. Inicia sesión nuevamente.');
+        } else {
+          setSkillsError(data.error ? `Error: ${data.error}` : 'Error al cargar habilidades');
+        }
+      }
+    } catch (err) {
+      console.error('Error loading skills', err);
+      setSkillsError('Error de red al cargar habilidades');
+    } finally {
+      setSkillsLoading(false);
+    }
+  };
+
+  // Agregar habilidad
+  const handleAddSkill = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setSkillsLoading(true);
+    setSkillsError(null);
+    try {
+      const payload = {
+        ...skillForm,
+        years_experience: skillForm.years_experience ? Number(skillForm.years_experience) : null
+      };
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/skills`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Error al agregar habilidad');
+      await loadSkills();
+      setSkillForm({ name: '', category: '', level: '', years_experience: '', description: '' });
+      setShowSkillForm(false);
+    } catch (err) {
+      console.error('Error adding skill', err);
+      setSkillsError('Error al agregar habilidad');
+    } finally {
+      setSkillsLoading(false);
+    }
+  };
+
+  // Eliminar habilidad
+  const handleDeleteSkill = async (id: number) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setSkillsLoading(true);
+    setSkillsError(null);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/skills/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Error al eliminar habilidad');
+      await loadSkills();
+    } catch (err) {
+      console.error('Error deleting skill', err);
+      setSkillsError('Error al eliminar habilidad');
+    } finally {
+      setSkillsLoading(false);
     }
   };
 
@@ -1358,10 +1475,54 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
           <div className="w-full max-w-4xl">
             <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
               <h3 className="text-xl font-bold text-gray-800 mb-6">Habilidades Técnicas y Profesionales</h3>
-              <div className="text-gray-500 text-center py-8">
-                Formulario para agregar habilidades con niveles de competencia
-                <br />
-                <span className="text-sm">Conectado a la tabla `skills`</span>
+              {skillsError && (
+                <div className="text-red-500 text-center mb-4">{skillsError}</div>
+              )}
+              {skillsLoading ? (
+                <div className="text-gray-500">Cargando habilidades...</div>
+              ) : skills.length === 0 ? (
+                <div className="text-gray-500">No hay habilidades registradas.</div>
+              ) : (
+                <ul className="mb-6">
+                  {skills.map(skill => (
+                    <li key={skill.id} className="flex justify-between items-center py-2 border-b">
+                      <div>
+                        <span className="font-semibold">{skill.name}</span>
+                        {skill.category && <span className="ml-2 text-gray-500">[{skill.category}]</span>}
+                        {skill.level && <span className="ml-2 text-blue-600">Nivel: {skill.level}</span>}
+                        {skill.years_experience !== null && skill.years_experience !== undefined && (
+                          <span className="ml-2 text-green-600">{skill.years_experience} años</span>
+                        )}
+                        {skill.description && <span className="ml-2 text-gray-400">{skill.description}</span>}
+                      </div>
+                      <button onClick={() => handleDeleteSkill(skill.id)} className="text-red-500 ml-4">Eliminar</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="pt-4">
+                {!showSkillForm ? (
+                  <button type="button" onClick={() => setShowSkillForm(true)} className="px-4 py-2 bg-green-600 text-white rounded">+ Agregar habilidad</button>
+                ) : (
+                  <form onSubmit={handleAddSkill} className="grid grid-cols-2 gap-4">
+                    <input required placeholder="Nombre" value={skillForm.name} onChange={e=>setSkillForm(f=>({...f,name:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <input placeholder="Categoría" value={skillForm.category} onChange={e=>setSkillForm(f=>({...f,category:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <select required value={skillForm.level} onChange={e=>setSkillForm(f=>({...f,level:e.target.value}))} className="px-3 py-2 border rounded">
+                      <option value="">Selecciona nivel</option>
+                      <option value="beginner">Principiante</option>
+                      <option value="intermediate">Intermedio</option>
+                      <option value="advanced">Avanzado</option>
+                      <option value="expert">Experto</option>
+                    </select>
+                    <input type="number" min="0" placeholder="Años de experiencia" value={skillForm.years_experience} onChange={e=>setSkillForm(f=>({...f,years_experience:e.target.value}))} className="px-3 py-2 border rounded" />
+                    <input placeholder="Descripción" value={skillForm.description} onChange={e=>setSkillForm(f=>({...f,description:e.target.value}))} className="px-3 py-2 border rounded col-span-2" />
+                    <div className="col-span-2 flex gap-2 mt-2">
+                      <button type="submit" disabled={skillsLoading} className="px-4 py-2 bg-blue-600 text-white rounded">{skillsLoading ? 'Guardando...' : 'Agregar habilidad'}</button>
+                      <button type="button" onClick={()=>setShowSkillForm(false)} className="px-4 py-2 bg-gray-300 text-gray-700 rounded">Cancelar</button>
+                      {skillsError && <div className="text-red-500 ml-2">{skillsError}</div>}
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           </div>
@@ -1369,13 +1530,104 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
 
         {/* Resumen */}
         {activeTab === "Resumen" && (
+
           <div className="w-full max-w-4xl">
             <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur">
               <h3 className="text-xl font-bold text-gray-800 mb-6">Resumen del Perfil</h3>
-              <div className="text-gray-500 text-center py-8">
-                Vista general de toda la información del perfil
-                <br />
-                <span className="text-sm">Próximamente disponible</span>
+              <div className="space-y-6">
+                {/* Contacto */}
+                <div>
+                  <h4 className="font-semibold text-blue-700 mb-2">Información de contacto</h4>
+                  <div className="text-gray-700">Teléfono: {telefono || "-"}</div>
+                  <div className="text-gray-700">Dirección: {direccion || "-"}</div>
+                </div>
+                {/* Experiencia */}
+                <div>
+                  <h4 className="font-semibold text-blue-700 mb-2">Experiencia laboral</h4>
+                  {workExperiences.length === 0 ? (
+                    <div className="text-gray-500">Sin experiencia registrada.</div>
+                  ) : (
+                    <ul className="list-disc ml-6">
+                      {workExperiences.map(exp => (
+                        <li key={exp.id}>
+                          <span className="font-semibold">{exp.puesto}</span> en {exp.empresa} ({exp.category})
+                          {exp.fecha_inicio && ` | ${formatPrettyDate(exp.fecha_inicio)}`}
+                          {exp.fecha_fin && ` - ${formatPrettyDate(exp.fecha_fin)}`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* Educación */}
+                <div>
+                  <h4 className="font-semibold text-blue-700 mb-2">Educación</h4>
+                  {educationList.length === 0 ? (
+                    <div className="text-gray-500">Sin educación registrada.</div>
+                  ) : (
+                    <ul className="list-disc ml-6">
+                      {educationList.map(ed => (
+                        <li key={ed.id}>
+                          <span className="font-semibold">{ed.degree}</span> en {ed.institution}
+                          {ed.start_date && ` | ${formatPrettyDate(ed.start_date)}`}
+                          {ed.end_date && ` - ${formatPrettyDate(ed.end_date)}`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* Certificaciones */}
+                <div>
+                  <h4 className="font-semibold text-blue-700 mb-2">Certificaciones</h4>
+                  {certificationsList.length === 0 ? (
+                    <div className="text-gray-500">Sin certificaciones.</div>
+                  ) : (
+                    <ul className="list-disc ml-6">
+                      {certificationsList.map(cert => (
+                        <li key={cert.id}>
+                          <span className="font-semibold">{cert.name}</span> ({cert.issuing_organization})
+                          {cert.issue_date && ` | ${formatPrettyDate(cert.issue_date)}`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* Enlaces */}
+                <div>
+                  <h4 className="font-semibold text-blue-700 mb-2">Enlaces de portafolio</h4>
+                  {userLinksList.length === 0 ? (
+                    <div className="text-gray-500">Sin enlaces.</div>
+                  ) : (
+                    <ul className="list-disc ml-6">
+                      {userLinksList.map(link => (
+                        <li key={link.id}>
+                          <span className="font-semibold">{link.title || link.type}</span>: <a href={link.url} target="_blank" rel="noreferrer" className="text-blue-600">{link.url}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* Habilidades */}
+                <div>
+                  <h4 className="font-semibold text-blue-700 mb-2">Habilidades</h4>
+                  {skills.length === 0 ? (
+                    <div className="text-gray-500">Sin habilidades registradas.</div>
+                  ) : (
+                    <ul className="list-disc ml-6">
+                      {skills.map(skill => (
+                        <li key={skill.id}>
+                          <span className="font-semibold">{skill.name}</span>
+                          {skill.category && ` [${skill.category}]`}
+                          {skill.level && ` | Nivel: ${skill.level}`}
+                          {skill.years_experience !== null && skill.years_experience !== undefined && ` | ${skill.years_experience} años`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* Botón aceptar */}
+                <div className="pt-6 text-center">
+                  <button type="button" className="px-6 py-3 bg-blue-700 text-white rounded font-bold text-lg shadow hover:bg-blue-800 transition">Aceptar y continuar</button>
+                </div>
               </div>
             </div>
           </div>

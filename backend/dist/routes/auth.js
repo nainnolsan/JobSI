@@ -8,6 +8,63 @@ const db_1 = require("../db");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const router = (0, express_1.Router)();
+// ====== ENDPOINTS PARA HABILIDADES ======
+// Obtener habilidades del usuario
+router.get('/skills', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    try {
+        const result = await db_1.pool.query(`SELECT id, name, category, level, years_experience, description, created_at FROM skills WHERE user_id = $1 ORDER BY created_at DESC`, [userId]);
+        res.json(result.rows);
+    }
+    catch (err) {
+        console.error('Error getting skills:', err);
+        res.status(500).json({ error: 'Error obteniendo habilidades' });
+    }
+});
+// Crear habilidad
+router.post('/skills', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const { name, category, level, years_experience, description } = req.body;
+    try {
+        const result = await db_1.pool.query(`INSERT INTO skills (user_id, name, category, level, years_experience, description) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [userId, name, category || null, level, years_experience || null, description || null]);
+        res.status(201).json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error creating skill:', err);
+        res.status(500).json({ error: 'Error creando habilidad' });
+    }
+});
+// Actualizar habilidad
+router.put('/skills/:id', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    const { name, category, level, years_experience, description } = req.body;
+    try {
+        const result = await db_1.pool.query(`UPDATE skills SET name=$1, category=$2, level=$3, years_experience=$4, description=$5 WHERE id=$6 AND user_id=$7 RETURNING *`, [name, category || null, level, years_experience || null, description || null, id, userId]);
+        if (result.rows.length === 0)
+            return res.status(404).json({ error: 'Habilidad no encontrada' });
+        res.json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error updating skill:', err);
+        res.status(500).json({ error: 'Error actualizando habilidad' });
+    }
+});
+// Eliminar habilidad
+router.delete('/skills/:id', authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    try {
+        const result = await db_1.pool.query('DELETE FROM skills WHERE id=$1 AND user_id=$2 RETURNING *', [id, userId]);
+        if (result.rows.length === 0)
+            return res.status(404).json({ error: 'Habilidad no encontrada' });
+        res.json({ message: 'Habilidad eliminada' });
+    }
+    catch (err) {
+        console.error('Error deleting skill:', err);
+        res.status(500).json({ error: 'Error eliminando habilidad' });
+    }
+});
 function authenticateJWT(req, res, next) {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token)

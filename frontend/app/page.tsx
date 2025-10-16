@@ -83,7 +83,8 @@ export default function LoginPage() {
               } else {
                 localStorage.setItem("token", data.token);
                 setError(null);
-                router.push("/dashboard");
+                // Redirect to dashboard home view explicitly
+                router.push("/dashboard?view=home");
               }
             } catch {
               setError(lang === "es" ? "Error de red" : "Network error");

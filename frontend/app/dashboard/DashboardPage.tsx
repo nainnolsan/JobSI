@@ -7,10 +7,11 @@ import ProfileView from "./ProfileView";
 import CoverLetterView from "./CoverLetterView";
 import ResumeView from "./ResumeView";
 
-type DashboardView = "Profile" | "Cover Letter" | "Resume";
+type DashboardView = "Home" | "Profile" | "Cover Letter" | "Resume";
 
 export default function DashboardPage() {
-  const [activeView, setActiveView] = useState<DashboardView>("Profile");
+  const [activeView, setActiveView] = useState<DashboardView>("Home");
+  // read search params from window.location inside useEffect (avoid useSearchParams during prerender)
   const [username, setUsername] = useState<string | null>(null);
   const [nombres, setNombres] = useState<string | null>(null);
   const [jwtPayload, setJWTPayload] = useState<JWTPayload | null>(null);
@@ -34,6 +35,16 @@ export default function DashboardPage() {
       }
     };
     checkToken();
+    // If view param provided (e.g. /dashboard?view=profile), set active view (read from window on client)
+    let viewParam: string | null = null;
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      viewParam = params.get("view");
+    }
+    if (viewParam) {
+      const normalized = viewParam === "home" ? "Home" : (viewParam === "profile" ? "Profile" : (viewParam === "cover" ? "Cover Letter" : (viewParam === "resume" ? "Resume" : null)));
+      if (normalized) setActiveView(normalized as DashboardView);
+    }
   }, [router]);
 
   const handleLogout = () => {
@@ -43,6 +54,16 @@ export default function DashboardPage() {
 
   const renderView = () => {
     switch (activeView) {
+      case "Home":
+        return (
+          <div className="flex w-full flex-1 items-center justify-center pt-12">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-blue-700 mb-4">Bienvenido a JobSI</h2>
+              <p className="text-gray-600 text-lg">Aquí podrás completar tu perfil, subir tu CV y generar cartas de presentación.</p>
+              <div className="mt-8 text-gray-500">Cuando estés listo, haz clic en &quot;Profile&quot; para editar tus datos.</div>
+            </div>
+          </div>
+        );
       case "Profile":
         return <ProfileView jwtPayload={jwtPayload} />;
       case "Cover Letter":
@@ -60,11 +81,11 @@ export default function DashboardPage() {
       <header className="w-full fixed top-0 left-0 z-20 bg-white/60 backdrop-blur-lg text-gray-900 py-4 px-8 shadow flex items-center justify-between transition-all">
         {/* Logo/Título */}
         <div className="flex items-center gap-6">
-          <h1 className="text-xl font-bold text-blue-700">JobSI</h1>
+          <h1 className="text-xl font-bold text-blue-700 cursor-pointer" onClick={() => setActiveView("Home")}>JobSI</h1>
           
           {/* Navegación principal */}
           <nav className="flex gap-1">
-            {(["Profile", "Cover Letter", "Resume"] as DashboardView[]).map((view) => (
+            {( ["Profile", "Cover Letter", "Resume"] as DashboardView[] ).map((view) => (
               <button
                 key={view}
                 onClick={() => setActiveView(view)}
@@ -111,8 +132,10 @@ export default function DashboardPage() {
       </header>
 
       {/* Contenido principal */}
-      <main className="flex-1 pt-[72px]">
-        {renderView()}
+      <main className="flex-1 pt-[72px] px-12">
+        <div className="w-full max-w-6xl mx-auto">
+          {renderView()}
+        </div>
       </main>
 
       {/* Footer */}
