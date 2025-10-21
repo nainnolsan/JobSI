@@ -83,3 +83,20 @@ CREATE TABLE skills (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 7. Crear tabla para cover letters
+CREATE TABLE cover_letters (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255), -- Titulo descriptivo para la carta
+    company VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'draft', -- draft, generated, sent
+    raw_job_text TEXT, -- Texto pegado del job post (guardado por defecto)
+    parsed JSONB, -- Resultado del parser: { title, company, location, responsibilities, requirements, keywords }
+    config JSONB, -- Configuración usada para generar (template, tone, length, language)
+    generated_draft TEXT, -- Último borrador generado
+    variants JSONB, -- Array con variantes generadas
+    scheduled_send_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
