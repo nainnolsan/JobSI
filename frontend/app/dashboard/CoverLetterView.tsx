@@ -29,7 +29,7 @@ export default function CoverLetterView() {
   const [rawText, setRawText] = useState("");
   const [parsed, setParsed] = useState<ParsedResult | null>(null);
   const [parseLoading, setParseLoading] = useState(false);
-  const [config, setConfig] = useState({ template: "Formal", tone: "Profesional", length: "medium", language: "auto" });
+  const [config] = useState({ template: "Formal", tone: "Profesional", length: "medium", language: "auto" });
   const router = useRouter();
 
   useEffect(() => {

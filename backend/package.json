@@ -15,14 +15,14 @@
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.13",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^24.5.2",
+    "@types/node": "^20.19.23",
     "@types/pg": "^8.15.5"
   }
 }

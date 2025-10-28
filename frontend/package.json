@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "dev:safe": "next dev",
-    "build": "next build --turbopack",
-    "build:safe": "next build",
+    "dev": "next dev",
+    "dev:turbo": "next dev --turbopack",
+    "build": "next build",
+    "build:turbo": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",

@@ -556,7 +556,7 @@ router.post('/cover-letters/parse', authenticateJWT, async (req: Request, res: R
             max_tokens: 800
           })
         });
-        const data = await resp.json();
+        const data: any = await resp.json();
         const text = data?.choices?.[0]?.message?.content;
         if (text) {
           try {
@@ -602,7 +602,7 @@ router.post('/cover-letters/generate', authenticateJWT, async (req: Request, res
         max_tokens: 1000,
       })
     });
-    const data = await resp.json();
+    const data: any = await resp.json();
     const content = data?.choices?.map((c: any) => c.message?.content?.trim()).filter(Boolean) || [];
 
     // Guardar la primera variante en la cover_letter si se pasó cover_letter_id
