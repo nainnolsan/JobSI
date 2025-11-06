@@ -2,12 +2,17 @@
 "use client";
 import React, { useState } from "react";
 
+type DebugResult = {
+  status: number;
+  body: unknown;
+};
+
 export default function ResumeView() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any | null>(null);
+  const [result, setResult] = useState<DebugResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const runDebugPost = async () => {
+  const runDebugPost = async (): Promise<void> => {
     setLoading(true);
     setError(null);
     setResult(null);
@@ -22,12 +27,12 @@ export default function ResumeView() {
         body: JSON.stringify(payload),
       });
 
-      const data = await resp.json();
+      const data: unknown = await resp.json();
       console.log('parse-debug response', data);
       setResult({ status: resp.status, body: data });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error calling parse-debug', err);
-      setError(String(err?.message ?? err));
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
