@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const openai_1 = __importDefault(require("openai"));
+const db_1 = require("../db");
 const authenticateToken_1 = require("../authenticateToken");
 const router = (0, express_1.Router)();
 // Temporary debug routes (no auth) for testing
@@ -47,23 +48,143 @@ router.post('/test', async (req, res) => {
         return res.status(500).json({ error: String(error) });
     }
 });
+// ====== CRUD ENDPOINTS FOR COVER LETTERS ======
+// List all cover letters for authenticated user
+router.get('/', authenticateToken_1.authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    try {
+        const result = await db_1.pool.query('SELECT id, title, company, status, created_at, updated_at FROM cover_letters WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+        res.json(result.rows);
+    }
+    catch (err) {
+        console.error('Error getting cover letters:', err);
+        res.status(500).json({ error: 'Error obteniendo cover letters' });
+    }
+});
+// Create new cover letter (draft)
+router.post('/', authenticateToken_1.authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const { title, company, raw_job_text, parsed, config } = req.body;
+    try {
+        const result = await db_1.pool.query(`INSERT INTO cover_letters (user_id, title, company, raw_job_text, parsed, config, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, 'draft') RETURNING *`, [userId, title || null, company || null, raw_job_text || null, parsed || null, config || null]);
+        res.status(201).json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error creating cover letter:', err);
+        res.status(500).json({ error: 'Error creando cover letter' });
+    }
+});
+// Get single cover letter by ID
+router.get('/:id', authenticateToken_1.authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    try {
+        const result = await db_1.pool.query('SELECT * FROM cover_letters WHERE id = $1 AND user_id = $2', [id, userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Cover letter no encontrada' });
+        }
+        res.json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error getting cover letter:', err);
+        res.status(500).json({ error: 'Error obteniendo cover letter' });
+    }
+});
+// Update cover letter
+router.put('/:id', authenticateToken_1.authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    const { title, company, raw_job_text, parsed, config, generated_draft, status } = req.body;
+    try {
+        const result = await db_1.pool.query(`UPDATE cover_letters 
+       SET title = $1, company = $2, raw_job_text = $3, parsed = $4, config = $5, 
+           generated_draft = $6, status = $7, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $8 AND user_id = $9 RETURNING *`, [title || null, company || null, raw_job_text || null, parsed || null, config || null,
+            generated_draft || null, status || 'draft', id, userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Cover letter no encontrada' });
+        }
+        res.json(result.rows[0]);
+    }
+    catch (err) {
+        console.error('Error updating cover letter:', err);
+        res.status(500).json({ error: 'Error actualizando cover letter' });
+    }
+});
+// Delete cover letter
+router.delete('/:id', authenticateToken_1.authenticateJWT, async (req, res) => {
+    const userId = req.user?.userId;
+    const id = req.params.id;
+    try {
+        const result = await db_1.pool.query('DELETE FROM cover_letters WHERE id = $1 AND user_id = $2 RETURNING *', [id, userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Cover letter no encontrada' });
+        }
+        res.json({ message: 'Cover letter eliminada' });
+    }
+    catch (err) {
+        console.error('Error deleting cover letter:', err);
+        res.status(500).json({ error: 'Error eliminando cover letter' });
+    }
+});
 // Initialize OpenAI
 const openai = new openai_1.default({
     apiKey: process.env.OPENAI_API_KEY
 });
-// Debug logging function
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+// Light retry wrapper for OpenAI with exponential backoff
+async function chatWithOpenAI(messages, temperature = 0) {
+    const maxAttempts = 3;
+    let attempt = 0;
+    let lastError = null;
+    while (attempt < maxAttempts) {
+        try {
+            return await openai.chat.completions.create({
+                model: OPENAI_MODEL,
+                temperature,
+                messages,
+                response_format: { type: 'json_object' },
+            });
+        }
+        catch (e) {
+            lastError = e;
+            const code = e?.code || e?.status;
+            const msg = e?.message || String(e);
+            // Don't retry insufficient_quota (billing issue)
+            const isQuota = code === 'insufficient_quota' || /insufficient_quota/i.test(msg);
+            const isRate = code === 429 || /rate limit|too many requests/i.test(msg);
+            const isServer = (typeof code === 'number' && code >= 500) || /server error/i.test(msg);
+            if (isQuota)
+                break;
+            if (!(isRate || isServer))
+                break;
+            // Exponential backoff: 300ms, 900ms
+            const delay = 300 * Math.pow(3, attempt);
+            await new Promise(r => setTimeout(r, delay));
+            attempt += 1;
+        }
+    }
+    throw lastError;
+}
+// Logging helpers: minimal by default, verbose if COVER_LETTERS_VERBOSE=1
+const isVerbose = process.env.COVER_LETTERS_VERBOSE === '1';
+const logInfo = (message, data) => {
+    const ts = new Date().toISOString();
+    if (data !== undefined) {
+        console.log(`[cover-letters][${ts}] ${message} ${JSON.stringify(data)}`);
+    }
+    else {
+        console.log(`[cover-letters][${ts}] ${message}`);
+    }
+};
 const logDebug = (message, data) => {
-    const timestamp = new Date().toISOString();
-    console.log('\n========================================');
-    console.log(`=== ${timestamp}: ${message} ===`);
-    console.log('========================================');
-    if (data) {
+    if (!isVerbose)
+        return;
+    const ts = new Date().toISOString();
+    console.log(`[cover-letters:verbose][${ts}] ${message}`);
+    if (data !== undefined)
         console.log(JSON.stringify(data, null, 2));
-    }
-    // Force flush stdout
-    if (process && process.stdout && process.stdout.write) {
-        process.stdout.write('');
-    }
 };
 // Calculate confidence based on completeness and quality
 const calculateConfidence = (parsed) => {
@@ -174,20 +295,14 @@ const heuristicExtract = (text) => {
 // Parse job description using AI
 router.post('/parse', authenticateToken_1.authenticateJWT, async (req, res) => {
     try {
-        logDebug('NUEVA PETICIÓN DE PARSING');
-        // Log request details
-        logDebug('Request Headers', req.headers);
-        logDebug('Request Body', req.body);
-        // Add small delay to ensure logs are visible
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Minimal start log
+        logInfo('Nueva consulta iniciada /parse');
         const { raw_job_text } = req.body;
         if (!raw_job_text) {
-            logDebug('ERROR: No job description provided');
+            logInfo('Solicitud inválida: raw_job_text faltante');
             return res.status(400).json({ error: 'No job description provided' });
         }
-        logDebug('Texto a procesar', { text: raw_job_text });
-        // Add small delay to ensure logs are visible
-        await new Promise(resolve => setTimeout(resolve, 100));
+        logDebug('Texto a procesar (snippet)', { snippet: String(raw_job_text).slice(0, 200) });
         // Detect language using AI (graceful fallback on errors)
         logDebug('Iniciando detección de idioma');
         let detectedLanguage = 'en';
@@ -213,8 +328,7 @@ router.post('/parse', authenticateToken_1.authenticateJWT, async (req, res) => {
             logDebug('⚠️ OpenAI language detection failed, falling back to default', { error: e?.message ?? e });
             detectedLanguage = 'en';
         }
-        // Add small delay
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Remove artificial delays
         logDebug('🤖 Iniciando análisis con OpenAI');
         // Parse job description using AI with graceful fallback to heuristic when OpenAI fails
         let parsedContent = null;
@@ -280,18 +394,18 @@ Focus on accuracy over completeness. If unsure about any piece of information, u
                     }
                 ]
             });
-            // Log the complete OpenAI response
-            console.log('Complete OpenAI response:', JSON.stringify(parseResponse, null, 2));
+            // Verbose-only logs for OpenAI output
+            logDebug('OpenAI response received');
             const rawContent = parseResponse.choices[0]?.message?.content;
-            console.log('Raw content from OpenAI:', rawContent);
+            logDebug('Raw content from OpenAI', rawContent);
             parsedContent = JSON.parse(rawContent || '{}');
-            console.log('Parsed content:', JSON.stringify(parsedContent, null, 2));
+            logDebug('Parsed content', parsedContent);
         }
         catch (e) {
             // If OpenAI fails (rate limit, quota, etc.), log and fall back to heuristic parsing
             aiAvailable = false;
             aiErrorMessage = e?.message ?? String(e);
-            logDebug('⚠️ OpenAI parsing failed, using heuristic fallback', { error: aiErrorMessage, code: e?.code ?? null });
+            logInfo('OpenAI no disponible, usando heurística');
             const heur = heuristicExtract(raw_job_text);
             parsedContent = {
                 title: null,
@@ -308,7 +422,7 @@ Focus on accuracy over completeness. If unsure about any piece of information, u
         parsedContent.keywords = parsedContent.keywords ?? [];
         // If AI returned empty lists, try a heuristic fallback
         if ((parsedContent.responsibilities.length === 0 || parsedContent.requirements.length === 0)) {
-            logDebug('AI returned empty lists, running heuristic fallback');
+            logInfo('Listas vacías detectadas, aplicando heurística complementaria');
             const heur = heuristicExtract(raw_job_text);
             if (parsedContent.responsibilities.length === 0 && heur.responsibilities.length > 0) {
                 parsedContent.responsibilities = heur.responsibilities;
@@ -328,6 +442,17 @@ Focus on accuracy over completeness. If unsure about any piece of information, u
             method: usedMethod,
             language: detectedLanguage
         };
+        // Minimal result summary
+        logInfo('Resultados parse', {
+            language: detectedLanguage,
+            method: usedMethod,
+            ai_available: aiAvailable,
+            title: result.title,
+            company: result.company,
+            responsibilities: result.responsibilities?.length || 0,
+            requirements: result.requirements?.length || 0,
+            confidence: result.confidence
+        });
         // Return both parsed object and top-level confidence for the frontend
         return res.json({ parsed: result, confidence: result.confidence, ai_available: aiAvailable, ai_error: aiErrorMessage });
     }
