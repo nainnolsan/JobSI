@@ -153,19 +153,29 @@ const openai = new OpenAI({
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
 // Light retry wrapper for OpenAI with exponential backoff
-async function chatWithOpenAI(messages: { role: 'system' | 'user' | 'assistant'; content: string }[], temperature = 0) {
+async function chatWithOpenAI(
+  messages: { role: 'system' | 'user' | 'assistant'; content: string }[], 
+  temperature = 0,
+  useJsonFormat = false
+) {
   const maxAttempts = 3;
   let attempt = 0;
   let lastError: any = null;
   
   while (attempt < maxAttempts) {
     try {
-      return await openai.chat.completions.create({
+      const params: any = {
         model: OPENAI_MODEL,
         temperature,
         messages,
-        response_format: { type: 'json_object' } as any,
-      });
+      };
+      
+      // Only add response_format if explicitly requested
+      if (useJsonFormat) {
+        params.response_format = { type: 'json_object' };
+      }
+      
+      return await openai.chat.completions.create(params);
     } catch (e: any) {
       lastError = e;
       const code = e?.code || e?.status;
@@ -367,9 +377,8 @@ router.post('/parse', authenticateJWT, async (req: Request, res: Response) => {
     logDebug('Iniciando detección de idioma');
     let detectedLanguage = 'en';
     try {
-      const languageResponse = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
+      const languageResponse = await chatWithOpenAI(
+        [
           {
             role: "system",
             content: "You are a language detector. Respond with only the ISO 639-1 language code of the text."
@@ -378,8 +387,10 @@ router.post('/parse', authenticateJWT, async (req: Request, res: Response) => {
             role: "user",
             content: raw_job_text
           }
-        ]
-      });
+        ],
+        0,
+        false // Language detection doesn't need JSON format
+      );
       detectedLanguage = languageResponse.choices[0]?.message?.content?.trim() || 'en';
       logDebug('Idioma detectado', { language: detectedLanguage });
     } catch (e: any) {
@@ -398,19 +409,17 @@ router.post('/parse', authenticateJWT, async (req: Request, res: Response) => {
   let aiAvailable = true;
   let aiErrorMessage: string | null = null;
     try {
-      const parseResponse = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        temperature: 0, // Set to 0 for most consistent parsing
-        messages: [
+      const parseResponse = await chatWithOpenAI(
+        [
           {
             role: "system",
-            content: `Eres un analizador de descripciones de trabajo. Tu tarea es extraer información clave del texto proporcionado y devolverla EN UN FORMATO JSON VÁLIDO.
+            content: `You are a job description parser. Extract information from job postings and return it as JSON.
 
-REGLAS IMPORTANTES:
-1. SOLO extrae información que esté EXPLÍCITAMENTE en el texto
-2. NO hagas suposiciones ni inferencias
-3. Si no encuentras información para un campo, usa null
-4. SIEMPRE responde con este formato JSON exacto:
+IMPORTANT RULES:
+1. ONLY extract information that is EXPLICITLY in the text
+2. DO NOT make assumptions or inferences
+3. If you can't find information for a field, use null
+4. ALWAYS respond with this exact JSON format:
 {
   "title": "Título completo del trabajo exactamente como aparece",
   "company": "Nombre de la empresa o null si no se menciona",
@@ -454,8 +463,10 @@ Focus on accuracy over completeness. If unsure about any piece of information, u
             role: "user",
             content: raw_job_text
           }
-        ]
-      });
+        ],
+        0, // Temperature 0 for consistent parsing
+        true // Use JSON format
+      );
 
   // Verbose-only logs for OpenAI output
   logDebug('OpenAI response received');
@@ -534,38 +545,99 @@ Focus on accuracy over completeness. If unsure about any piece of information, u
 // Generate cover letter
 router.post('/generate', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const { parsed, config, user_profile } = req.body;
+    const userId = req.user?.userId;
+    const { parsed, config, cover_letter_id } = req.body;
 
     if (!parsed) {
       return res.status(400).json({ error: 'No parsed job data provided' });
     }
 
-    // Generate cover letter using AI
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      temperature: 0.7, // Allow some creativity in generation
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional cover letter writer.\n" +
-            `Write a cover letter in the specified language: ${parsed.language || 'en'}.\n` +
-            "Use this format:\n" +
-            `- Professional and ${config.tone || 'formal'} tone\n` +
-            `- ${config.length || 'medium'} length\n` +
-            `- Match the template style: ${config.template || 'standard'}`
-        },
-        {
-          role: "user",
-          content: `Write a cover letter for a ${parsed.title} position at ${parsed.company}.\n\n` +
-            "Job Responsibilities:\n" +
-            `${parsed.responsibilities?.join("\n")}\n\n` +
-            "Job Requirements:\n" +
-            `${parsed.requirements?.join("\n")}\n\n` +
-            "User Profile:\n" +
-            `${JSON.stringify(user_profile, null, 2)}`
-        }
-      ]
-    });
+    console.log('[cover-letters] Generating cover letter for user', userId);
+
+    // Get complete user profile from database
+    const [userResult, workExpResult, educationResult, skillsResult] = await Promise.all([
+      pool.query('SELECT nombres, apellidos, email, telefono FROM users WHERE id = $1', [userId]),
+      pool.query('SELECT empresa, puesto, fecha_inicio, fecha_fin, descripcion FROM work_experiences WHERE user_id = $1 ORDER BY fecha_inicio DESC LIMIT 5', [userId]),
+      pool.query('SELECT institution, degree, field_of_study, end_date FROM education WHERE user_id = $1 ORDER BY start_date DESC LIMIT 3', [userId]),
+      pool.query('SELECT name, level FROM skills WHERE user_id = $1 AND category = \'technical\' LIMIT 10', [userId])
+    ]);
+
+    const userProfile = {
+      name: `${userResult.rows[0]?.nombres} ${userResult.rows[0]?.apellidos}`,
+      email: userResult.rows[0]?.email,
+      phone: userResult.rows[0]?.telefono,
+      work_experience: workExpResult.rows.map(exp => ({
+        company: exp.empresa,
+        position: exp.puesto,
+        duration: `${exp.fecha_inicio} to ${exp.fecha_fin || 'Present'}`,
+        description: exp.descripcion
+      })),
+      education: educationResult.rows.map(edu => ({
+        institution: edu.institution,
+        degree: edu.degree,
+        field: edu.field_of_study,
+        graduation: edu.end_date
+      })),
+      skills: skillsResult.rows.map(s => s.name)
+    };
+
+    console.log('[cover-letters] Profile loaded, calling OpenAI');
+
+    // Build detailed prompt for cover letter generation
+    const systemPrompt = `You are an expert cover letter writer. Write a professional, compelling cover letter that:
+- Is written in ${parsed.language === 'es' ? 'Spanish' : 'English'}
+- Has a ${config?.tone || 'professional'} tone
+- Is ${config?.length === 'short' ? '200-250' : config?.length === 'long' ? '400-500' : '300-350'} words
+- Directly addresses the job requirements and responsibilities
+- Highlights the candidate's most relevant experience and skills
+- Shows genuine interest and enthusiasm for the role
+- Uses specific examples when possible
+- Avoids clichés and generic statements
+
+Format:
+[Greeting]
+Dear Hiring Manager,
+
+[Opening paragraph - Hook their interest]
+[Body paragraph 1 - Address key requirements with your experience]
+[Body paragraph 2 - Highlight relevant achievements and skills]
+[Closing paragraph - Call to action and enthusiasm]
+
+Sincerely,
+${userProfile.name}`;
+
+    const userPrompt = `Job Position: ${parsed.title || 'Position'}
+Company: ${parsed.company || 'the company'}
+
+Key Responsibilities:
+${parsed.responsibilities?.slice(0, 5).map((r: string, i: number) => `${i + 1}. ${r}`).join('\n') || 'Not specified'}
+
+Key Requirements:
+${parsed.requirements?.slice(0, 5).map((r: string, i: number) => `${i + 1}. ${r}`).join('\n') || 'Not specified'}
+
+Candidate Profile:
+Name: ${userProfile.name}
+Email: ${userProfile.email}
+
+Recent Work Experience:
+${userProfile.work_experience.slice(0, 3).map((exp: any, i: number) => 
+  `${i + 1}. ${exp.position} at ${exp.company} (${exp.duration})\n   ${exp.description || ''}`
+).join('\n\n') || 'No work experience listed'}
+
+Education:
+${userProfile.education.map((edu: any) => 
+  `- ${edu.degree} in ${edu.field} from ${edu.institution}`
+).join('\n') || 'No education listed'}
+
+Technical Skills: ${userProfile.skills.join(', ') || 'Not specified'}
+
+Write a cover letter that connects this candidate's background to this specific job opportunity.`;
+
+    // Generate cover letter with OpenAI
+    const response = await chatWithOpenAI([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ], 0.7, false); // Don't use JSON format - we want plain text
 
     const coverLetter = response.choices[0]?.message?.content || '';
 
@@ -576,11 +648,26 @@ router.post('/generate', authenticateJWT, async (req: Request, res: Response) =>
       });
     }
 
+    console.log('[cover-letters] Cover letter generated successfully');
+
+    // If cover_letter_id provided, update the database record
+    if (cover_letter_id) {
+      await pool.query(
+        `UPDATE cover_letters 
+         SET generated_draft = $1, status = 'generated', updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2 AND user_id = $3`,
+        [coverLetter, cover_letter_id, userId]
+      );
+      console.log('[cover-letters] Updated cover letter record', cover_letter_id);
+    }
+
     return res.json({ 
       variants: [coverLetter],
+      generated_draft: coverLetter,
       metadata: {
-        model: "gpt-3.5-turbo",
+        model: OPENAI_MODEL,
         language: parsed.language,
+        word_count: coverLetter.split(/\s+/).length,
         confidence: calculateConfidence(parsed)
       }
     });

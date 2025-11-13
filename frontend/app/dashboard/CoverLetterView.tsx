@@ -1,7 +1,6 @@
 // CoverLetterView: lista + creación (modo automático y manual)
 "use client";
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 interface CoverLetterSummary {
   id: number;
@@ -34,7 +33,7 @@ export default function CoverLetterView() {
   const [parseLoading, setParseLoading] = useState(false);
   const [generateLoading, setGenerateLoading] = useState(false);
   const [config] = useState({ template: "Formal", tone: "Profesional", length: "medium", language: "auto" });
-  const router = useRouter();
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadLetters();
@@ -108,42 +107,140 @@ export default function CoverLetterView() {
     setGenerateLoading(true);
     try {
       const token = localStorage.getItem("token");
+      
+      // Step 1: Save/Update draft first to get cover_letter_id
+      let coverId = editingId;
+      
+      if (!coverId) {
+        // Create new draft
+        const saveRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cover-letters`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ 
+            title: parsed?.title || 'Cover Letter', 
+            company: parsed?.company || null, 
+            raw_job_text: rawText, 
+            parsed, 
+            config,
+            status: 'draft'
+          })
+        });
+        
+        if (saveRes.ok) {
+          const savedData = await saveRes.json();
+          coverId = savedData.id;
+          setEditingId(coverId);
+        } else {
+          throw new Error('Failed to save draft');
+        }
+      }
+      
+      // Step 2: Generate cover letter
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cover-letters/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ parsed, config, user_profile: {}, variants: 1 })
+        body: JSON.stringify({ 
+          parsed, 
+          config, 
+          cover_letter_id: coverId 
+        })
       });
       
       if (res.ok) {
         const data = await res.json();
-        const draft = data.variants?.[0];
+        const draft = data.generated_draft || data.variants?.[0];
+        
         if (draft) {
-          // TODO: Mostrar preview modal con el texto generado
-          handleSaveDraft();
+          // Step 3: Redirect to editor view
+          window.location.href = `/dashboard/cover-letter-editor/${coverId}`;
         }
       } else {
         const errorText = await res.text();
         console.error("Generate failed", res.status, errorText);
-        // TODO: Mostrar error en UI
+        alert(`Error generando cover letter: ${errorText}`);
       }
     } catch (err) {
       console.error("Generate error:", err);
-      // TODO: Mostrar error en UI
+      alert("Error generando cover letter. Por favor intenta de nuevo.");
     } finally {
       setGenerateLoading(false);
     }
   };
 
+  const handleOpenDraft = async (id: number) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cover-letters/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        // Pre-fill form with existing data
+        setEditingId(id);
+        setRawText(data.raw_job_text || "");
+        
+        // If parsed data exists, load it
+        if (data.parsed) {
+          const normalized = {
+            title: data.parsed.title || "",
+            company: data.parsed.company || "",
+            responsibilities: data.parsed.responsibilities || [],
+            requirements: data.parsed.requirements || [],
+            confidence: typeof data.parsed.confidence === 'number' && isFinite(data.parsed.confidence) ? data.parsed.confidence : 0,
+            method: data.parsed.method === 'heuristic' ? 'heuristic' : 'ai',
+            language: data.parsed.language || 'en'
+          };
+          setParsed(normalized as ParsedResult);
+          setStep("review"); // Go directly to review step
+        } else if (data.raw_job_text) {
+          setStep("input-data"); // Go to input step with raw text
+        } else {
+          setStep("select-mode"); // Start from beginning
+        }
+        
+        setShowNewModal(true);
+      } else {
+        console.error("Load failed", await res.text());
+        alert("Error cargando borrador");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error cargando borrador");
+    }
+  };
+
+  const handleViewCompleted = (id: number) => {
+    // For completed cover letters, go directly to the editor
+    window.location.href = `/dashboard/cover-letter-editor/${id}`;
+  };
+
   const handleSaveDraft = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cover-letters`, {
-        method: "POST",
+      
+      // If editing existing draft, use PUT, otherwise POST
+      const url = editingId 
+        ? `${process.env.NEXT_PUBLIC_API_URL}/api/cover-letters/${editingId}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/api/cover-letters`;
+      
+      const method = editingId ? "PUT" : "POST";
+      
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: parsed?.title || 'Cover Letter', company: parsed?.company || null, raw_job_text: rawText, parsed, config })
+        body: JSON.stringify({ 
+          title: parsed?.title || 'Cover Letter', 
+          company: parsed?.company || null, 
+          raw_job_text: rawText, 
+          parsed, 
+          config 
+        })
       });
+      
       if (res.ok) {
         setShowNewModal(false);
+        resetForm();
         loadLetters();
       } else {
         console.error("Save failed", await res.text());
@@ -154,22 +251,36 @@ export default function CoverLetterView() {
     }
   };
 
+  const resetForm = () => {
+    setEditingId(null);
+    setRawText("");
+    setParsed(null);
+    setStep("select-mode");
+    setMode("auto");
+  };
+
+  // Separate letters by status
+  const drafts = letters.filter(l => l.status === 'draft');
+  const completed = letters.filter(l => l.status === 'completed' || l.status === 'generated');
+
   return (
     <div className="pt-12">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold">Cover Letters</h2>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={() => setShowNewModal(true)}>Nueva</button>
+        <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={() => { resetForm(); setShowNewModal(true); }}>Nueva</button>
       </div>
 
-      <div 
-        className="bg-white rounded-lg shadow-lg transition-all hover:shadow-xl cursor-pointer"
-        onClick={() => !loading && setShowNewModal(true)}
-      >
-        {loading ? (
-          <div className="flex items-center justify-center p-8">
+      {loading ? (
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
-        ) : letters.length === 0 ? (
+        </div>
+      ) : letters.length === 0 ? (
+        <div 
+          className="bg-white rounded-lg shadow-lg transition-all hover:shadow-xl cursor-pointer"
+          onClick={() => setShowNewModal(true)}
+        >
           <div className="p-12 text-center">
             <div className="mb-4">
               <svg className="w-16 h-16 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -179,50 +290,130 @@ export default function CoverLetterView() {
             <h3 className="text-xl font-semibold text-gray-700 mb-2">No tienes cover letters</h3>
             <p className="text-gray-500">Haz click en cualquier parte para crear una nueva</p>
           </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {letters.map((l) => (
-              <div key={l.id} className="p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="font-semibold text-gray-900">{l.title}</div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      {l.company && <span className="mr-2">{l.company}</span>}
-                      <span>{new Date(l.created_at).toLocaleString()}</span>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Drafts Section */}
+          {drafts.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-lg font-semibold text-gray-700">Borradores</h3>
+                <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                  {drafts.length}
+                </span>
+              </div>
+              <div className="bg-white rounded-lg shadow-lg divide-y divide-gray-100">
+                {drafts.map((l) => (
+                  <div key={l.id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold text-gray-900">{l.title}</div>
+                          <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 rounded">
+                            Draft
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          {l.company && <span className="mr-2">{l.company}</span>}
+                          <span>{new Date(l.created_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDraft(l.id);
+                          }}
+                        >
+                          Abrir
+                        </button>
+                        <button 
+                          className="px-4 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button 
-                      className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/dashboard/cover-letters/${l.id}`);
-                      }}
-                    >
-                      Abrir
-                    </button>
-                    <button 
-                      className="px-4 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+
+          {/* Completed Section */}
+          {completed.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-lg font-semibold text-gray-700">Completadas</h3>
+                <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                  {completed.length}
+                </span>
+              </div>
+              <div className="bg-white rounded-lg shadow-lg divide-y divide-gray-100">
+                {completed.map((l) => (
+                  <div key={l.id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold text-gray-900">{l.title}</div>
+                          <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">
+                            Completada
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          {l.company && <span className="mr-2">{l.company}</span>}
+                          <span>{new Date(l.created_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewCompleted(l.id);
+                          }}
+                        >
+                          Ver
+                        </button>
+                        <button 
+                          className="px-4 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty state when only one section has items */}
+          {drafts.length === 0 && completed.length > 0 && (
+            <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
+              <p className="text-gray-500 text-sm">No tienes borradores en progreso</p>
+            </div>
+          )}
+          
+          {completed.length === 0 && drafts.length > 0 && (
+            <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
+              <p className="text-gray-500 text-sm">No tienes cover letters completadas aún</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {showNewModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4 p-0 overflow-hidden">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-2xl font-bold text-gray-900">Nueva Cover Letter</h3>
+                <h3 className="text-2xl font-bold text-gray-900">{editingId ? 'Editar Cover Letter' : 'Nueva Cover Letter'}</h3>
                 <button 
-                  onClick={() => setShowNewModal(false)} 
+                  onClick={() => { setShowNewModal(false); resetForm(); }} 
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -239,9 +430,9 @@ export default function CoverLetterView() {
             </div>
 
             {/* Modal content based on current step */}
-            <div className="flex-1">
+            <div className="flex-1 overflow-y-auto">
               {step === "select-mode" && (
-                <div className="grid md:grid-cols-2 gap-4 p-6">
+                <div className="grid md:grid-cols-2 gap-4 p-6 pb-8">
                   <button
                     className={`relative p-6 rounded-lg border-2 transition-all ${
                       mode === 'auto' 
@@ -293,7 +484,7 @@ export default function CoverLetterView() {
               )}
 
               {step === "input-data" && (
-                <div className="p-6">
+                <div className="p-6 pb-8">
                   {mode === "auto" ? (
                     <div className="space-y-4">
                       <textarea
@@ -364,7 +555,7 @@ export default function CoverLetterView() {
               )}
 
               {step === "review" && parsed && (
-                <div className="p-6">
+                <div className="p-6 pb-8">
                   <div className="flex items-center gap-4 mb-6">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full text-sm">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -483,7 +674,7 @@ export default function CoverLetterView() {
             </div>
 
             {/* Footer con botones */}
-            <div className="flex justify-end gap-3 p-6">
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 flex-shrink-0 bg-white">
               <button
                 className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
                 onClick={() => {
