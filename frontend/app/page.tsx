@@ -1,153 +1,70 @@
-// ...existing code...
-// Vista de Login minimalista usando TailwindCSS y shadcn/ui
-"use client";
-import React from "react";
-import Image from "next/image";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-// Si usas shadcn/ui, normalmente importas los componentes así:
-// import { Input } from "@/components/ui/input";
-// import { Button } from "@/components/ui/button"
-export default function LoginPage() {
-  // Diccionario de traducciones tipado
-  const t: Record<"es" | "en", { title: string; username: string; password: string; login: string }> = {
-    es: {
-      title: "Iniciar sesión",
-      username: "Nombre de usuario",
-      password: "Contraseña",
-      login: "Iniciar sesión"
-    },
-    en: {
-      title: "Sign in",
-      username: "Username",
-      password: "Password",
-      login: "Sign in"
-    }
-  };
-  // Estado para idioma
-  const [lang, setLang] = useState<"es" | "en">("es");
-  // Estado para modo oscuro
-  const [darkMode, setDarkMode] = useState(false);
-  // Estado para login
-  const [username, setUsername] = useState("");
-  const router = useRouter();
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+// Home/Landing Page (server component)
+import Link from "next/link";
 
-  // Aplica la clase dark al html según el estado
-  useEffect(() => {
-    const html = document.documentElement;
-    if (darkMode) {
-      html.classList.add("dark");
-    } else {
-      html.classList.remove("dark");
-    }
-  }, [darkMode]);
-
+export default function HomePage() {
   return (
-    <>
-      {/* Botón flotante para cambiar idioma usando SVGs locales */}
-      <div className="fixed top-6 right-6 z-50 cursor-pointer">
-        {lang === "es" ? (
-         <Image src="/mexico.svg" alt="México" width={32} height={20} className="rounded-md hover:scale-125 transition-transform duration-200" onClick={() => setLang("en")} />
-        ) : (
-         <Image src="/usa.svg" alt="USA" width={32} height={20} className="rounded-md hover:scale-125 transition-transform duration-200" onClick={() => setLang("es")} />
-        )}
-      </div>
-      <div
-        className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}
-      >
-        {/* Contenedor del formulario */}
-        <div
-          className={`w-full max-w-sm p-8 rounded-lg shadow-md ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'}`}
-        >
-          <h1 className="text-2xl font-bold mb-6 text-center">{t[lang].title}</h1>
-          {/* Formulario de login */}
-          <form className="space-y-4" onSubmit={async (e) => {
-            e.preventDefault();
-            setLoading(true);
-            setError(null);
-            try {
-              const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/signin`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password })
-              });
-              const data = await res.json();
-              if (!res.ok) {
-                setError(data.error || (lang === "es" ? "Credenciales incorrectas" : "Invalid credentials"));
-              } else {
-                localStorage.setItem("token", data.token);
-                setError(null);
-                // Redirect to dashboard home view explicitly
-                router.push("/dashboard?view=home");
-              }
-            } catch {
-              setError(lang === "es" ? "Error de red" : "Network error");
-            } finally {
-              setLoading(false);
-            }
-          }}>
-            {/* Campo de username */}
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium">{t[lang].username}</label>
-              <Input
-                type="text"
-                id="username"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 ${darkMode ? 'bg-gray-800 text-gray-100 border border-gray-500/40 placeholder:text-gray-400 selection:bg-blue-400 selection:text-white focus:ring-1 focus:ring-gray-400/40 focus:border-gray-400/40' : 'bg-gray-50 text-gray-900 border-gray-300 placeholder:text-gray-400 selection:bg-blue-200 selection:text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-blue-400'}`}
-                placeholder={lang === "es" ? "tusuario" : "username"}
-                required
-              />
+    <main className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      {/* Hero */}
+      <section className="max-w-6xl mx-auto px-6 pt-20 pb-16">
+        <div className="grid md:grid-cols-2 gap-10 items-center">
+          <div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium mb-4">JobSI • AI Job Toolkit</span>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900">
+              Crea cover letters épicas en minutos
+            </h1>
+            <p className="mt-4 text-lg text-gray-600">
+              Pega la descripción del trabajo, conectamos tu perfil y generamos una cover letter personalizada, clara y profesional.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/register" className="px-5 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors">Comenzar gratis</Link>
+              <Link href="/login" className="px-5 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Iniciar sesión</Link>
             </div>
-            {/* Campo de contraseña */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium">{t[lang].password}</label>
-              <Input
-                type="password"
-                id="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 ${darkMode ? 'bg-gray-800 text-gray-100 border border-gray-500/40 placeholder:text-gray-400 selection:bg-blue-400 selection:text-white focus:ring-1 focus:ring-gray-400/40 focus:border-gray-400/40' : 'bg-gray-50 text-gray-900 border-gray-300 placeholder:text-gray-400 selection:bg-blue-200 selection:text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-blue-400'}`}
-                placeholder={lang === "es" ? "••••••••" : "••••••••"}
-                required
-              />
+            <div className="mt-6 flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-green-500"/>Rápido</div>
+              <div className="flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-purple-500"/>Personalizado</div>
+              <div className="flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-amber-500"/>Exportable a PDF</div>
             </div>
-            {/* Botón de login usando shadcn/ui */}
-            {error && (
-              <div className="text-red-500 text-sm text-center">{error}</div>
-            )}
-            <Button
-              type="submit"
-              className={`w-full text-white ${darkMode ? 'bg-purple-500 hover:bg-purple-600 text-gray-100' : 'bg-amber-400 hover:bg-amber-500'}`}
-              disabled={loading}
-            >
-              {loading ? (lang === "es" ? "Entrando..." : "Signing in...") : t[lang].login}
-            </Button>
-          </form>
-          <div className="mt-4 text-center">
-            ¿No tienes cuenta? <a href="/register" className="text-blue-600 hover:underline">Regístrate</a>
+          </div>
+          <div className="relative rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+            <div className="h-64 bg-gradient-to-br from-blue-50 via-white to-purple-50 rounded-lg border border-dashed border-gray-200 flex items-center justify-center text-gray-400">
+              Demo UI
+            </div>
+            <p className="mt-3 text-sm text-gray-500">Previsualiza, edita y descarga tu carta con nuestro editor.</p>
           </div>
         </div>
-        {/* Botón flotante para activar/desactivar modo oscuro */}
-        <div className="fixed bottom-6 right-6 z-50">
-          <Button
-            variant="outline"
-            onClick={() => setDarkMode((prev) => !prev)}
-            className={`flex items-center justify-center group transition-colors duration-300 ${darkMode ? 'bg-gray-800 text-gray-400 border border-gray-700' : 'bg-white text-gray-400 border border-gray-300'}`}
-          >
-            {darkMode
-              ? <Sun className="w-5 h-5 text-gray-700 group-hover:text-yellow-400 transition-colors duration-200" />
-              : <Moon className="w-5 h-5 text-gray-400 group-hover:text-purple-400 transition-colors duration-200" />
-            }
-          </Button>
+      </section>
+
+      {/* Features */}
+      <section className="max-w-6xl mx-auto px-6 py-12">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">¿Cómo funciona?</h2>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="rounded-xl border border-gray-200 bg-white p-6">
+            <h3 className="font-semibold text-gray-900">1. Pega la vacante</h3>
+            <p className="mt-2 text-gray-600 text-sm">Analizamos responsabilidades y requisitos con IA para entender qué buscan.</p>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-white p-6">
+            <h3 className="font-semibold text-gray-900">2. Conectamos tu perfil</h3>
+            <p className="mt-2 text-gray-600 text-sm">Tomamos tu educación, experiencia y skills desde tu perfil.</p>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-white p-6">
+            <h3 className="font-semibold text-gray-900">3. Genera y edita</h3>
+            <p className="mt-2 text-gray-600 text-sm">Obtén una cover letter lista, edítala y descárgala en PDF.</p>
+          </div>
         </div>
-      </div>
-    </>
+      </section>
+
+      {/* CTA */}
+      <section className="max-w-6xl mx-auto px-6 py-12">
+        <div className="rounded-2xl bg-blue-600 text-white p-8 flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className="text-2xl font-bold">Empieza ahora — es gratis</h3>
+            <p className="text-blue-100 mt-1">Crea tu primera cover letter en menos de 3 minutos.</p>
+          </div>
+          <div className="mt-4 md:mt-0">
+            <Link href="/register" className="px-5 py-3 rounded-lg bg-white text-blue-700 font-semibold hover:bg-blue-50 transition-colors">Crear cuenta</Link>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
