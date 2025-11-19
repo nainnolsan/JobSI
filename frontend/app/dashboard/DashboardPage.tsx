@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { decodeJWT, JWTPayload } from "@/lib/decodeJWT";
+import { decodeJWT, JWTPayload } from "@/shared/lib/decodeJWT";
 import ProfileView from "./ProfileView";
 import CoverLetterView from "./CoverLetterView";
 import ResumeView from "./ResumeView";

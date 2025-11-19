@@ -1,9 +1,8 @@
 "use client";
 import React, { useState } from "react";
-// import { BsLinkedin, BsTwitter, BsFacebook } from "react-icons/bs"; // No utilizados por ahora
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
 import Link from "next/link";
 
 export default function RegisterPage() {
@@ -43,7 +42,7 @@ export default function RegisterPage() {
       } else {
         setSuccess(true);
         setTimeout(() => {
-          router.push("/");
+          router.push("/login");
         }, 1200);
       }
   } catch {
@@ -63,16 +62,16 @@ export default function RegisterPage() {
           <Input name="apellidos" placeholder="Apellidos" value={form.apellidos} onChange={handleChange} required />
           <Input name="fecha_nacimiento" type="date" placeholder="Fecha de nacimiento" value={form.fecha_nacimiento} onChange={handleChange} required />
           <Input name="telefono" placeholder="Teléfono" value={form.telefono} onChange={handleChange} />
-          <Input name="email" type="email" placeholder="Correo electrónico" value={form.email} onChange={handleChange} required />
+          <Input name="email" type="text" placeholder="Correo electrónico" value={form.email} onChange={handleChange} required />
           <Input name="password" type="password" placeholder="Contraseña" value={form.password} onChange={handleChange} required />
           {error && <div className="text-red-500 text-sm text-center">{error}</div>}
-          {success && <div className="text-green-600 text-sm text-center">¡Registro exitoso! Ahora puedes <Link href="/">iniciar sesión</Link>.</div>}
+          {success && <div className="text-green-600 text-sm text-center">¡Registro exitoso! Ahora puedes <Link href="/login">iniciar sesión</Link>.</div>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Registrando..." : "Registrarse"}
           </Button>
         </form>
         <div className="mt-4 text-center">
-          ¿Ya tienes cuenta? <Link href="/" className="text-blue-600 hover:underline">Inicia sesión</Link>
+          ¿Ya tienes cuenta? <Link href="/login" className="text-blue-600 hover:underline">Inicia sesión</Link>
         </div>
       </div>
     </div>

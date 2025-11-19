@@ -1,8 +1,8 @@
 // Vista del perfil del usuario (dashboard anterior)
 "use client";
 import React, { useState, useEffect } from "react";
-import { countryPhoneDataFull } from '@/lib/countryPhoneDataFull';
-import { JWTPayload } from "@/lib/decodeJWT";
+import { countryPhoneDataFull } from '@/shared/lib/countryPhoneDataFull';
+import { JWTPayload } from "@/shared/lib/decodeJWT";
 import { BsLinkedin, BsInstagram, BsFacebook, BsTwitterX, BsGithub, BsYoutube, BsTiktok, BsGlobe, BsPlusCircle, BsXCircle, BsPencil, BsTrash } from "react-icons/bs";
 
 interface ProfileViewProps {
