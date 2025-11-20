@@ -100,21 +100,21 @@ export default function CoverLetterEditor() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-violet-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10 no-print">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 px-6 py-4 sticky top-0 z-10 no-print">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push("/dashboard")}
-              className="text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               <svg
                 className="w-6 h-6"
@@ -131,7 +131,7 @@ export default function CoverLetterEditor() {
               </svg>
             </button>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {coverLetter?.title || "Cover Letter"}
               </h1>
               <p className="text-sm text-gray-500">
@@ -145,7 +145,7 @@ export default function CoverLetterEditor() {
             <select
               value={fontFamily}
               onChange={(e) => setFontFamily(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               <option value="Arial">Arial</option>
               <option value="Times New Roman">Times New Roman</option>
@@ -158,7 +158,7 @@ export default function CoverLetterEditor() {
             <select
               value={fontSize}
               onChange={(e) => setFontSize(Number(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               <option value="12">12pt</option>
               <option value="14">14pt</option>
@@ -189,7 +189,7 @@ export default function CoverLetterEditor() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
             >
               {saving ? (
                 <>
@@ -221,7 +221,7 @@ export default function CoverLetterEditor() {
 
       {/* Editor */}
       <div className="max-w-4xl mx-auto py-8 px-6">
-        <div className="bg-white rounded-lg shadow-lg p-12 min-h-[800px]" id="cover-letter-content">
+        <div className="bg-white rounded-xl shadow-xl p-12 min-h-[800px] border border-gray-200" id="cover-letter-content">
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}

@@ -1,4 +1,7 @@
 @import "tailwindcss";
+
+@config "../tailwind.config.js";
+
 @import "tw-animate-css";
 
 /* Removed invalid @custom-variant at-rule */

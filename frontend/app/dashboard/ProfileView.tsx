@@ -640,7 +640,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
             ].map(tab => (
               <li
                 key={tab}
-                className={`px-4 py-2 rounded cursor-pointer font-semibold transition-all ${activeTab === tab ? "bg-blue-50 text-blue-700" : "hover:bg-gray-100 text-gray-700"}`}
+                className={`px-4 py-2 rounded cursor-pointer font-semibold transition-all ${activeTab === tab ? "bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400" : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"}`}
                 onClick={() => setActiveTab(tab)}
               >
                 {tab}
@@ -652,14 +652,14 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
 
       {/* Área principal */}
       <main className="flex-1 p-12 flex flex-col items-center justify-center">
-        <h2 className="text-3xl font-bold text-blue-700 mb-8">{activeTab}</h2>
+        <h2 className="text-3xl font-bold text-purple-700 mb-8">{activeTab}</h2>
         
         {/* Información de contacto */}
         {activeTab === "Información de contacto" && (
           <form className="w-full max-w-lg bg-white/80 rounded-2xl shadow-lg p-8 flex flex-col gap-6 border border-gray-200 backdrop-blur" onSubmit={handleSave}>
             {/* Los datos se cargan automáticamente al montar el componente */}
             <div className="relative flex flex-col gap-2">
-              <label className="block text-gray-700 font-semibold mb-2">Nombre completo</label>
+              <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">Nombre completo</label>
               <div className="relative">
                 <input
                   type="text"
@@ -673,7 +673,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                 </span>
               </div>
               
-              <label className="block text-gray-700 font-semibold mb-2">Apellidos</label>
+              <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">Apellidos</label>
               <div className="relative">
                 <input
                   type="text"
@@ -689,12 +689,12 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
             </div>
             
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Teléfono</label>
+              <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">Teléfono</label>
               <div className="flex gap-2 items-center">
                 <div className="relative">
                   <button
                     type="button"
-                    className="flex items-center bg-gray-100 rounded px-3 py-2 border border-gray-300 font-semibold text-gray-700 min-w-[90px] justify-center focus:outline-none gap-2"
+                    className="flex items-center bg-gray-100 dark:bg-gray-800 rounded px-3 py-2 border border-gray-300 dark:border-gray-600 font-semibold text-gray-700 dark:text-gray-300 min-w-[90px] justify-center focus:outline-none gap-2"
                     onClick={() => setShowCountryDropdown((prev) => !prev)}
                   >
                     <span className="text-xl">{selectedCountry.flag}</span>
@@ -707,7 +707,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                         <button
                           key={country.code}
                           type="button"
-                          className={`flex items-center w-full px-4 py-2 gap-2 text-left hover:bg-blue-50 ${selectedCountry.code === country.code ? 'bg-blue-100 font-bold' : ''}`}
+                          className={`flex items-center w-full px-4 py-2 gap-2 text-left hover:bg-purple-50 ${selectedCountry.code === country.code ? 'bg-purple-100 font-bold' : ''}`}
                           onClick={() => { setSelectedCountry(country); setShowCountryDropdown(false); }}
                         >
                           <span className="text-xl">{country.flag}</span>
@@ -720,7 +720,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                 </div>
                 <input
                   type="tel"
-                  className="w-full px-4 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700"
+                  className="w-full px-4 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700 dark:text-gray-300 dark:bg-gray-800 dark:border-gray-600"
                   placeholder="Ejemplo: 145 1235"
                   maxLength={14}
                   value={telefono}
@@ -730,10 +730,10 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
             </div>
             
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Dirección</label>
+              <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">Dirección</label>
               <input
                 type="text"
-                className="w-full px-4 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-4 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-purple-400"
                 placeholder="Dirección"
                 value={direccion}
                 onChange={e => setDireccion(e.target.value)}
@@ -741,7 +741,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
             </div>
             
             <div className="relative">
-              <label className="block text-gray-700 font-semibold mb-2">Email</label>
+              <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">Email</label>
               <div className="relative">
                 <input
                   type="email"
@@ -758,7 +758,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
             
             {/* Redes Sociales */}
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Redes Sociales</label>
+              <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">Redes Sociales</label>
               
               {/* Redes sociales existentes */}
               <div className="space-y-2 mb-4">
@@ -780,7 +780,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                           type="url"
                           value={editingUrl}
                           onChange={(e) => setEditingUrl(e.target.value)}
-                          className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-purple-400"
                           placeholder="URL del perfil"
                           autoFocus
                         />
@@ -826,7 +826,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                       </div>
                       
                       {/* Nombre de la plataforma */}
-                      <span className="flex-1 text-sm text-gray-700 font-medium">{platform}</span>
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 font-medium">{platform}</span>
                       
                       {/* Botón editar */}
                       <button
@@ -835,7 +835,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                           setEditingPlatform(platform);
                           setEditingUrl(url);
                         }}
-                        className="text-gray-400 hover:text-blue-500 transition-colors"
+                        className="text-gray-400 hover:text-purple-500 transition-colors"
                         title="Editar URL"
                       >
                         <BsPencil size={14} />
@@ -868,7 +868,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                     setNewSocialPlatform("LinkedIn");
                     setNewSocialUrl("");
                   }}
-                  className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-all"
+                  className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded text-gray-500 hover:border-purple-400 hover:text-purple-600 transition-all"
                 >
                   + Agregar red social
                 </button>
@@ -880,7 +880,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                       <button
                         type="button"
                         onClick={() => setShowPlatformDropdown(!showPlatformDropdown)}
-                        className="flex items-center gap-2 px-3 py-2 bg-white border rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 min-w-[120px]"
+                        className="flex items-center gap-2 px-3 py-2 bg-white border rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-400 min-w-[120px]"
                       >
                         {(() => {
                           const platformInfo = socialPlatforms[newSocialPlatform as keyof typeof socialPlatforms];
@@ -888,7 +888,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                           return (
                             <>
                               <IconComponent style={{ fontSize: "1.2rem", color: "#6B7280" }} />
-                              <span className="text-sm text-gray-700">{newSocialPlatform}</span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{newSocialPlatform}</span>
                               <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 20 20">
                                 <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
@@ -904,14 +904,14 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                             <button
                               key={platform}
                               type="button"
-                              className={`flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-gray-50 ${newSocialPlatform === platform ? 'bg-blue-50 font-medium' : ''}`}
+                              className={`flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-gray-50 ${newSocialPlatform === platform ? 'bg-purple-50 font-medium' : ''}`}
                               onClick={() => {
                                 setNewSocialPlatform(platform);
                                 setShowPlatformDropdown(false);
                               }}
                             >
                               <info.icon style={{ fontSize: "1.2rem", color: "#6B7280" }} />
-                              <span className="text-sm text-gray-700">{platform}</span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{platform}</span>
                             </button>
                           ))}
                         </div>
@@ -924,7 +924,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                       placeholder="URL del perfil"
                       value={newSocialUrl}
                       onChange={(e) => setNewSocialUrl(e.target.value)}
-                      className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                      className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-400 text-sm"
                     />
                     
                     {/* Botones de acción */}
@@ -965,7 +965,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
               )}
             </div>
             
-            <button type="submit" className="mt-4 px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-all" disabled={loading}>
+            <button type="submit" className="mt-4 px-6 py-2 bg-purple-600 text-white rounded font-bold hover:bg-purple-700 transition-all" disabled={loading}>
               {loading ? "Guardando..." : "Guardar"}
             </button>
             {success && <div className="text-green-600 text-sm text-center mt-2">¡Información de contacto guardada exitosamente!</div>}
@@ -992,7 +992,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                   {/* Trabajo Actual */}
                   {currentJobs.length > 0 && (
                     <div className="bg-white/80 rounded-2xl shadow-lg p-8 border border-gray-200 backdrop-blur max-w-2xl mx-auto">
-                      <h3 className="text-xl font-bold text-gray-800 mb-6">Trabajo Actual</h3>
+                      <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Trabajo Actual</h3>
                       <div className="space-y-4">
                         {currentJobs.map((exp) => (
                           <div key={exp.id} className="border-l-4 border-green-500 pl-3 py-1.5">
@@ -1008,7 +1008,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                                   <label className="flex items-center gap-2"><input type="checkbox" checked={editForm?.is_current} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), is_current: e.target.checked, fecha_fin: e.target.checked ? '' : (p as EditForm).fecha_fin}))} /> Actual</label>
                                 </div>
                                 <div className="flex gap-2">
-                                  <button onClick={() => saveEditExperience(exp.id)} disabled={editLoading} className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-60">{editLoading ? 'Guardando...' : 'Guardar'}</button>
+                                  <button onClick={() => saveEditExperience(exp.id)} disabled={editLoading} className="px-3 py-1 bg-purple-600 text-white rounded disabled:opacity-60">{editLoading ? 'Guardando...' : 'Guardar'}</button>
                                   <button onClick={cancelEdit} className="px-3 py-1 bg-gray-200 rounded">Cancelar</button>
                                 </div>
                                 {editSuccess && <div className="text-green-600 text-sm mt-2">Guardado</div>}
@@ -1029,7 +1029,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                                   )}
                                 </div>
                                 <div className="flex items-start gap-2">
-                                  <button onClick={() => startEditExperience(exp)} className="text-gray-500 hover:text-blue-600" title="Editar"><BsPencil size={14} /></button>
+                                  <button onClick={() => startEditExperience(exp)} className="text-gray-500 hover:text-purple-600" title="Editar"><BsPencil size={14} /></button>
                                   <button onClick={() => handleDeleteExperience(exp.id)} className="text-gray-400 hover:text-red-500 ml-3" title="Eliminar"><BsTrash size={14} /></button>
                                 </div>
                               </div>
@@ -1046,7 +1046,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                       <h3 className="text-xl font-bold text-gray-800 mb-6">Trabajos Pasados</h3>
                       <div className="space-y-4">
                         {pastJobs.map((exp) => (
-                          <div key={exp.id} className="border-l-4 border-blue-500 pl-3 py-1.5">
+                          <div key={exp.id} className="border-l-4 border-purple-500 pl-3 py-1.5">
                             {editingExpId === exp.id ? (
                               <div className="space-y-2">
                                 <div className="grid grid-cols-2 gap-2">
@@ -1059,7 +1059,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                                   <label className="flex items-center gap-2"><input type="checkbox" checked={editForm?.is_current} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), is_current: e.target.checked, fecha_fin: e.target.checked ? '' : (p as EditForm).fecha_fin}))} /> Actual</label>
                                 </div>
                                 <div className="flex gap-2">
-                                  <button onClick={() => saveEditExperience(exp.id)} disabled={editLoading} className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-60">{editLoading ? 'Guardando...' : 'Guardar'}</button>
+                                  <button onClick={() => saveEditExperience(exp.id)} disabled={editLoading} className="px-3 py-1 bg-purple-600 text-white rounded disabled:opacity-60">{editLoading ? 'Guardando...' : 'Guardar'}</button>
                                   <button onClick={cancelEdit} className="px-3 py-1 bg-gray-200 rounded">Cancelar</button>
                                 </div>
                                 {editSuccess && <div className="text-green-600 text-sm mt-2">Guardado</div>}
@@ -1080,7 +1080,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                                   )}
                                 </div>
                                 <div className="flex items-start gap-2">
-                                  <button onClick={() => startEditExperience(exp)} className="text-gray-500 hover:text-blue-600" title="Editar"><BsPencil size={14} /></button>
+                                  <button onClick={() => startEditExperience(exp)} className="text-gray-500 hover:text-purple-600" title="Editar"><BsPencil size={14} /></button>
                                   <button onClick={() => handleDeleteExperience(exp.id)} className="text-gray-400 hover:text-red-500 ml-3" title="Eliminar"><BsTrash size={14} /></button>
                                 </div>
                               </div>
@@ -1110,7 +1110,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                                   <label className="flex items-center gap-2"><input type="checkbox" checked={editForm?.is_current} onChange={(e)=>setEditForm((p)=>({...(p as EditForm), is_current: e.target.checked, fecha_fin: e.target.checked ? '' : (p as EditForm).fecha_fin}))} /> Actual</label>
                                 </div>
                                 <div className="flex gap-2">
-                                  <button onClick={() => saveEditExperience(exp.id)} disabled={editLoading} className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-60">{editLoading ? 'Guardando...' : 'Guardar'}</button>
+                                  <button onClick={() => saveEditExperience(exp.id)} disabled={editLoading} className="px-3 py-1 bg-purple-600 text-white rounded disabled:opacity-60">{editLoading ? 'Guardando...' : 'Guardar'}</button>
                                   <button onClick={cancelEdit} className="px-3 py-1 bg-gray-200 rounded">Cancelar</button>
                                 </div>
                                 {editSuccess && <div className="text-green-600 text-sm mt-2">Guardado</div>}
@@ -1132,7 +1132,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                                   )}
                                 </div>
                                 <div className="flex items-start gap-2">
-                                  <button onClick={() => startEditExperience(exp)} className="text-gray-500 hover:text-blue-600" title="Editar"><BsPencil size={14} /></button>
+                                  <button onClick={() => startEditExperience(exp)} className="text-gray-500 hover:text-purple-600" title="Editar"><BsPencil size={14} /></button>
                                   <button onClick={() => handleDeleteExperience(exp.id)} className="text-gray-400 hover:text-red-500 ml-3" title="Eliminar"><BsTrash size={14} /></button>
                                 </div>
                               </div>
@@ -1158,7 +1158,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                             <select
                               value={experienceForm.category}
                               onChange={(e) => setExperienceForm(prev => ({...prev, category: e.target.value}))}
-                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                               <option value="trabajo">Trabajo</option>
                               <option value="pasantia">Pasantía</option>
@@ -1170,7 +1170,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                             <select
                               value={experienceForm.time_type}
                               onChange={(e) => setExperienceForm(prev => ({...prev, time_type: e.target.value}))}
-                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                               <option value="full_time">Tiempo completo</option>
                               <option value="part_time">Medio tiempo</option>
@@ -1187,7 +1187,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                               required
                               value={experienceForm.empresa}
                               onChange={(e) => setExperienceForm(prev => ({...prev, empresa: e.target.value}))}
-                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                               placeholder="Nombre de la empresa"
                             />
                           </div>
@@ -1199,7 +1199,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                               required
                               value={experienceForm.puesto}
                               onChange={(e) => setExperienceForm(prev => ({...prev, puesto: e.target.value}))}
-                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                               placeholder="Tu puesto de trabajo"
                             />
                           </div>
@@ -1212,7 +1212,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                             type="text"
                             value={experienceForm.ubicacion}
                             onChange={(e) => setExperienceForm(prev => ({...prev, ubicacion: e.target.value}))}
-                            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                             placeholder="Ciudad, País"
                           />
                         </div>
@@ -1226,7 +1226,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                               required
                               value={experienceForm.fecha_inicio}
                               onChange={(e) => setExperienceForm(prev => ({...prev, fecha_inicio: e.target.value}))}
-                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                             />
                           </div>
                           
@@ -1238,7 +1238,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                                 disabled={experienceForm.is_current}
                                 value={experienceForm.is_current ? '' : experienceForm.fecha_fin}
                                 onChange={(e) => setExperienceForm(prev => ({...prev, fecha_fin: e.target.value}))}
-                                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
                               />
                               <label className="flex items-center">
                                 <input
@@ -1263,7 +1263,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                           <textarea
                             value={experienceForm.descripcion}
                             onChange={(e) => setExperienceForm(prev => ({...prev, descripcion: e.target.value}))}
-                            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                             rows={3}
                             placeholder="Describe tus responsabilidades y logros..."
                           />
@@ -1274,7 +1274,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                           <button
                             type="submit"
                             disabled={experienceLoading}
-                            className="px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
+                            className="px-6 py-2 bg-purple-600 text-white rounded font-bold hover:bg-purple-700 transition-all disabled:opacity-50"
                           >
                             {experienceLoading ? "Guardando..." : "Guardar Experiencia"}
                           </button>
@@ -1370,7 +1370,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                   </div>
                   <textarea placeholder="Descripción (opcional)" value={educationFormState.description} onChange={e=>setEducationFormState(prev=>({...prev,description:e.target.value}))} className="w-full px-3 py-2 border rounded mt-3" />
                   <div className="flex gap-2 mt-3">
-                    <button type="submit" disabled={educationLoading} className="px-4 py-2 bg-blue-600 text-white rounded">{educationLoading ? 'Guardando...' : 'Agregar educación'}</button>
+                    <button type="submit" disabled={educationLoading} className="px-4 py-2 bg-purple-600 text-white rounded">{educationLoading ? 'Guardando...' : 'Agregar educación'}</button>
                     {educationError && <div className="text-red-500">{educationError}</div>}
                   </div>
                     </form>
@@ -1417,7 +1417,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                   <input placeholder="URL de verificación (opcional)" value={certFormState.credential_url} onChange={e=>setCertFormState(prev=>({...prev,credential_url:e.target.value}))} className="px-3 py-2 border rounded mt-3" />
                   <textarea placeholder="Descripción (opcional)" value={certFormState.description} onChange={e=>setCertFormState(prev=>({...prev,description:e.target.value}))} className="w-full px-3 py-2 border rounded mt-3" />
                   <div className="flex gap-2 mt-3">
-                    <button type="submit" disabled={certLoading} className="px-4 py-2 bg-blue-600 text-white rounded">{certLoading ? 'Guardando...' : 'Agregar certificación'}</button>
+                    <button type="submit" disabled={certLoading} className="px-4 py-2 bg-purple-600 text-white rounded">{certLoading ? 'Guardando...' : 'Agregar certificación'}</button>
                     {certError && <div className="text-red-500">{certError}</div>}
                   </div>
                     </form>
@@ -1437,7 +1437,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                     <div key={l.id} className="flex justify-between items-start p-2 border-b">
                       <div>
                         <div className="font-semibold">{l.title || l.type}</div>
-                        <div className="text-sm text-gray-600"><a href={l.url} target="_blank" rel="noreferrer" className="text-blue-600">{l.url}</a></div>
+                        <div className="text-sm text-gray-600"><a href={l.url} target="_blank" rel="noreferrer" className="text-purple-600">{l.url}</a></div>
                       </div>
                       <div>
                         <button onClick={() => deleteUserLink(l.id)} className="text-red-500">Eliminar</button>
@@ -1459,7 +1459,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                     <input placeholder="URL" required value={linkFormState.url} onChange={e=>setLinkFormState(prev=>({...prev,url:e.target.value}))} className="px-3 py-2 border rounded" />
                   </div>
                   <div className="flex gap-2 mt-3">
-                    <button type="submit" disabled={linkLoading} className="px-4 py-2 bg-blue-600 text-white rounded">{linkLoading ? 'Guardando...' : 'Agregar enlace'}</button>
+                    <button type="submit" disabled={linkLoading} className="px-4 py-2 bg-purple-600 text-white rounded">{linkLoading ? 'Guardando...' : 'Agregar enlace'}</button>
                     {linkError && <div className="text-red-500">{linkError}</div>}
                   </div>
                     </form>
@@ -1489,7 +1489,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                       <div>
                         <span className="font-semibold">{skill.name}</span>
                         {skill.category && <span className="ml-2 text-gray-500">[{skill.category}]</span>}
-                        {skill.level && <span className="ml-2 text-blue-600">Nivel: {skill.level}</span>}
+                        {skill.level && <span className="ml-2 text-purple-600">Nivel: {skill.level}</span>}
                         {skill.years_experience !== null && skill.years_experience !== undefined && (
                           <span className="ml-2 text-green-600">{skill.years_experience} años</span>
                         )}
@@ -1517,7 +1517,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                     <input type="number" min="0" placeholder="Años de experiencia" value={skillForm.years_experience} onChange={e=>setSkillForm(f=>({...f,years_experience:e.target.value}))} className="px-3 py-2 border rounded" />
                     <input placeholder="Descripción" value={skillForm.description} onChange={e=>setSkillForm(f=>({...f,description:e.target.value}))} className="px-3 py-2 border rounded col-span-2" />
                     <div className="col-span-2 flex gap-2 mt-2">
-                      <button type="submit" disabled={skillsLoading} className="px-4 py-2 bg-blue-600 text-white rounded">{skillsLoading ? 'Guardando...' : 'Agregar habilidad'}</button>
+                      <button type="submit" disabled={skillsLoading} className="px-4 py-2 bg-purple-600 text-white rounded">{skillsLoading ? 'Guardando...' : 'Agregar habilidad'}</button>
                       <button type="button" onClick={()=>setShowSkillForm(false)} className="px-4 py-2 bg-gray-300 text-gray-700 rounded">Cancelar</button>
                       {skillsError && <div className="text-red-500 ml-2">{skillsError}</div>}
                     </div>
@@ -1537,13 +1537,13 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
               <div className="space-y-6">
                 {/* Contacto */}
                 <div>
-                  <h4 className="font-semibold text-blue-700 mb-2">Información de contacto</h4>
+                  <h4 className="font-semibold text-purple-700 mb-2">Información de contacto</h4>
                   <div className="text-gray-700">Teléfono: {telefono || "-"}</div>
                   <div className="text-gray-700">Dirección: {direccion || "-"}</div>
                 </div>
                 {/* Experiencia */}
                 <div>
-                  <h4 className="font-semibold text-blue-700 mb-2">Experiencia laboral</h4>
+                  <h4 className="font-semibold text-purple-700 mb-2">Experiencia laboral</h4>
                   {workExperiences.length === 0 ? (
                     <div className="text-gray-500">Sin experiencia registrada.</div>
                   ) : (
@@ -1560,7 +1560,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                 </div>
                 {/* Educación */}
                 <div>
-                  <h4 className="font-semibold text-blue-700 mb-2">Educación</h4>
+                  <h4 className="font-semibold text-purple-700 mb-2">Educación</h4>
                   {educationList.length === 0 ? (
                     <div className="text-gray-500">Sin educación registrada.</div>
                   ) : (
@@ -1577,7 +1577,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                 </div>
                 {/* Certificaciones */}
                 <div>
-                  <h4 className="font-semibold text-blue-700 mb-2">Certificaciones</h4>
+                  <h4 className="font-semibold text-purple-700 mb-2">Certificaciones</h4>
                   {certificationsList.length === 0 ? (
                     <div className="text-gray-500">Sin certificaciones.</div>
                   ) : (
@@ -1593,14 +1593,14 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                 </div>
                 {/* Enlaces */}
                 <div>
-                  <h4 className="font-semibold text-blue-700 mb-2">Enlaces de portafolio</h4>
+                  <h4 className="font-semibold text-purple-700 mb-2">Enlaces de portafolio</h4>
                   {userLinksList.length === 0 ? (
                     <div className="text-gray-500">Sin enlaces.</div>
                   ) : (
                     <ul className="list-disc ml-6">
                       {userLinksList.map(link => (
                         <li key={link.id}>
-                          <span className="font-semibold">{link.title || link.type}</span>: <a href={link.url} target="_blank" rel="noreferrer" className="text-blue-600">{link.url}</a>
+                          <span className="font-semibold">{link.title || link.type}</span>: <a href={link.url} target="_blank" rel="noreferrer" className="text-purple-600">{link.url}</a>
                         </li>
                       ))}
                     </ul>
@@ -1608,7 +1608,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                 </div>
                 {/* Habilidades */}
                 <div>
-                  <h4 className="font-semibold text-blue-700 mb-2">Habilidades</h4>
+                  <h4 className="font-semibold text-purple-700 mb-2">Habilidades</h4>
                   {skills.length === 0 ? (
                     <div className="text-gray-500">Sin habilidades registradas.</div>
                   ) : (
@@ -1626,7 +1626,7 @@ export default function ProfileView({ jwtPayload }: ProfileViewProps) {
                 </div>
                 {/* Botón aceptar */}
                 <div className="pt-6 text-center">
-                  <button type="button" className="px-6 py-3 bg-blue-700 text-white rounded font-bold text-lg shadow hover:bg-blue-800 transition">Aceptar y continuar</button>
+                  <button type="button" className="px-6 py-3 bg-purple-700 text-white rounded font-bold text-lg shadow hover:bg-purple-800 transition">Aceptar y continuar</button>
                 </div>
               </div>
             </div>
