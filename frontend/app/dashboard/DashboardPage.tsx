@@ -128,10 +128,10 @@ export default function DashboardPage() {
         {/* Logo/Título */}
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveView("Home")}>
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-violet-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">C</span>
-            </div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">CoverME</h1>
+            <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-orange-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+              <span>C</span>
+            </div>
           </div>
           
           {/* Navegación principal */}

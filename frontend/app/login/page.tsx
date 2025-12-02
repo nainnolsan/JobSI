@@ -60,10 +60,10 @@ export default function LoginPage() {
       {/* Logo */}
       <Link href="/" className="mb-8">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-violet-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">C</span>
-          </div>
           <span className="font-bold text-2xl bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">CoverME</span>
+          <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-orange-500 rounded-lg flex items-center justify-center text-white font-bold">
+            <span>C</span>
+          </div>
         </div>
       </Link>
 
